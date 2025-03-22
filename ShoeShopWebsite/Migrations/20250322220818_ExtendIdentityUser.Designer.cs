@@ -12,7 +12,7 @@ using ShoeShopWebsite.Models;
 namespace ShoeShopWebsite.Migrations
 {
     [DbContext(typeof(NikeShopDbContext))]
-    [Migration("20250322211304_ExtendIdentityUser")]
+    [Migration("20250322220818_ExtendIdentityUser")]
     partial class ExtendIdentityUser
     {
         /// <inheritdoc />
