@@ -69,9 +69,16 @@
                                     <label for="size-@product.ProductID" class="form-label">Kích thước:</label>
                                     <select id="size-@product.ProductID" class="form-select form-select-sm size-select" data-product-id="@product.ProductID">
                                         <option value="">Chọn kích thước</option>
-                                        @foreach (var size in ViewBag.Sizes)
+                                        @if (ViewBag.Sizes != null)
                                         {
-                                            <option value="@size.SizeID">@size.SizeName</option>
+                                            @foreach (var size in ViewBag.Sizes)
+                                            {
+                                                <option value="@size.SizeID">@size.SizeName</option>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <option value="">Không có kích thước nào</option>
                                         }
                                     </select>
                                 </div>
@@ -121,17 +128,61 @@
         transition: background-color 0.3s ease;
     }
 
-    .btn.add-to-cart:hover {
-        background-color: #218838;
-    }
+        .btn.add-to-cart:hover {
+            background-color: #218838;
+        }
 
-    .btn.add-to-cart i {
-        font-size: 1rem;
-    }
+        .btn.add-to-cart i {
+            font-size: 1rem;
+        }
 </style>
 
 @section Scripts {
     <script>
+        // Hàm hiển thị loading
+        function showLoading() {
+            if (!$('#loading-overlay').length) {
+                $('body').append(`
+                    <div id="loading-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999; display: flex; justify-content: center; align-items: center;">
+                        <div class="spinner-border text-light" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                `);
+            }
+            $('#loading-overlay').show();
+        }
+
+        // Hàm ẩn loading
+        function hideLoading() {
+            $('#loading-overlay').hide();
+        }
+
+        // Hàm hiển thị thông báo toast
+        function showToast(message, isSuccess) {
+            if (!$('#toast-container').length) {
+                $('body').append('<div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>');
+            }
+
+            var toastClass = isSuccess ? 'bg-success' : 'bg-danger';
+            var toastId = 'toast-' + new Date().getTime();
+            var toastHtml = `
+                <div id="${toastId}" class="toast ${toastClass} text-white" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+
+            $('#toast-container').append(toastHtml);
+            var $toast = $(`#${toastId}`);
+            $toast.toast({ delay: 3000 });
+            $toast.toast('show');
+            $toast.on('hidden.bs.toast', function () {
+                $(this).remove();
+            });
+        }
+
         $(document).ready(function () {
             $('.add-to-cart').on('click', function () {
                 var productId = $(this).data('product-id');
@@ -142,7 +193,6 @@
                     return;
                 }
 
-                // Hiển thị loading
                 showLoading();
 
                 $.ajax({
@@ -153,16 +203,16 @@
                         hideLoading();
                         if (response.success) {
                             showToast(response.message, true);
-                            // Cập nhật số lượng giỏ hàng
                             $('.cart-count').text(`Cart (${response.cartCount})`);
                             $(document).trigger('cart-updated');
                         } else {
                             showToast(response.message, false);
                         }
                     },
-                    error: function () {
+                    error: function (xhr, status, error) {
                         hideLoading();
-                        showToast('Đã có lỗi xảy ra. Vui lòng thử lại sau.', false);
+                        showToast('Đã có lỗi xảy ra: ' + error, false);
+                        console.log('AJAX error:', xhr.responseText);
                     }
                 });
             });

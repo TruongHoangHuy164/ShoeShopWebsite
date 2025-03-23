@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ShoeShopWebsite.Models;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace ShoeShopWebsite.Controllers
 {
@@ -19,10 +20,19 @@ namespace ShoeShopWebsite.Controllers
         // GET: Home
         public async Task<IActionResult> Index()
         {
+            // L?y danh sách s?n ph?m
             var products = await _context.Products
                 .Include(p => p.ProductImages)
-                .Include(p => p.ProductColors).ThenInclude(pc => pc.Color)
+                .Include(p => p.ProductColors)
+                .ThenInclude(pc => pc.Color)
                 .ToListAsync();
+
+            // L?y danh sách kích th??c
+            var sizes = await _context.Sizes.ToListAsync();
+
+            // Gán danh sách kích th??c vào ViewBag
+            ViewBag.Sizes = sizes;
+
             return View(products);
         }
 
