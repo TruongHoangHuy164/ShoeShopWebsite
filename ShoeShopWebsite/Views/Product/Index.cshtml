@@ -41,8 +41,7 @@
                                         var imagesToShow = item.ProductImages.Take(3);
                                         foreach (var img in imagesToShow)
                                         {
-                                            <img src="@img.ImageURL" alt="@item.ProductName"
-                                                 class="product-thumbnail mx-1" />
+                                            <img src="@img.ImageURL" alt="@item.ProductName" class="product-thumbnail mx-1" />
                                         }
                                     }
                                     else
@@ -56,16 +55,23 @@
                             <td>
                                 @if (item.ProductColors != null && item.ProductColors.Any())
                                 {
-                                    <div class="d-flex justify-content-center">
+                                    <div class="d-flex justify-content-center flex-wrap gap-1">
                                         @foreach (var productColor in item.ProductColors)
                                         {
-                                            <span class="badge bg-secondary mx-1">@productColor.Color.ColorName</span>
+                                            if (productColor.Color != null)
+                                            {
+                                                <span class="badge bg-secondary">@productColor.Color.ColorName</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning">Màu không xác định</span>
+                                            }
                                         }
                                     </div>
                                 }
                                 else
                                 {
-                                    <span>Không có</span>
+                                    <span class="text-muted">Không có</span>
                                 }
                             </td>
                             <td>@item.Description</td>
@@ -115,5 +121,9 @@
 
     .btn i {
         font-size: 14px;
+    }
+
+    .badge {
+        margin: 2px;
     }
 </style>
