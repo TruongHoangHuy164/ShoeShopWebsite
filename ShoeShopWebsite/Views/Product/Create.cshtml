@@ -4,6 +4,7 @@
 	ViewData["Title"] = "Thêm sản phẩm mới";
 	Layout = "~/Views/Shared/_Layout.cshtml";
 	var sizes = ViewData["Sizes"] as List<ShoeShopWebsite.Models.Size>;
+	var colors = ViewData["Colors"] as List<ShoeShopWebsite.Models.Color>;
 }
 
 <div class="container-fluid pt-4 px-4">
@@ -31,17 +32,6 @@
 		}
 
 
-		@* @if (!ViewData.ModelState.IsValid) *@
-		@* { *@
-		@* 	<div class="alert alert-danger"> *@
-		@* 		<ul> *@
-		@* 			@foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors)) *@
-		@* 			{ *@
-		@* 				<li>@error.ErrorMessage</li> *@
-		@* 			} *@
-		@* 		</ul> *@
-		@* 	</div> *@
-		@* } *@
 
 		<form asp-action="Create" method="post" enctype="multipart/form-data">
 			<div asp-validation-summary="ModelOnly" class="text-danger"></div>
@@ -76,12 +66,53 @@
 							</div>
 
 							<div class="mb-3">
+								<label for="Colors" class="form-label">Màu sắc</label>
+								<select id="Colors" name="ColorID" class="form-select" asp-items="@(ViewData["Colors"] as List<SelectListItem>)" required>
+									<option value="">-- Chọn màu --</option>
+								</select>
+								<span class="text-danger"></span>
+							</div>
+
+
+							<div class="mb-3">
 								<label asp-for="Description" class="form-label">Mô tả</label>
 								<textarea asp-for="Description" class="form-control" rows="5"></textarea>
 								<span asp-validation-for="Description" class="text-danger"></span>
 							</div>
 						</div>
 					</div>
+					@* <div class="card mb-4"> *@
+					@* 	<div class="card-header"> *@
+					@* 		<h5 class="mb-0">Màu sắc</h5> *@
+					@* 	</div> *@
+					@* 	<div class="card-body"> *@
+					@* 		<div class="table-responsive"> *@
+					@* 			<table class="table table-bordered"> *@
+					@* 				<thead> *@
+					@* 					<tr> *@
+					@* 						<th>Chọn màu</th> *@
+					@* 					</tr> *@
+					@* 				</thead> *@
+					@* 				<tbody> *@
+					@* 					@if (ViewData["Colors"] is List<ShoeShopWebsite.Models.Color> colors) *@
+					@* 					{ *@
+					@* 						foreach (var color in colors) *@
+					@* 						{ *@
+					@* 							<tr> *@
+					@* 								<td> *@
+					@* 									<div class="form-check"> *@
+					@* 										<input type="checkbox" id="color_@color.ColorID" name="selectedColors[]" value="@color.ColorID" class="form-check-input"> *@
+					@* 										<label class="form-check-label" for="color_@color.ColorID">@color.ColorName</label> *@
+					@* 									</div> *@
+					@* 								</td> *@
+					@* 							</tr> *@
+					@* 						} *@
+					@* 					} *@
+					@* 				</tbody> *@
+					@* 			</table> *@
+					@* 		</div> *@
+					@* 	</div> *@
+					@* </div> *@
 
 					<div class="card mb-4">
 						<div class="card-header">
@@ -224,24 +255,6 @@
 				}
 			});
 
-
-			// Kiểm tra nếu có kích cỡ được chọn thì phải có số lượng
-			// const sizeCheckboxes = document.querySelectorAll('.size-checkbox:checked');
-			// const stockInputs = document.querySelectorAll('.stock-input');
-
-			// for (let i = 0; i < sizeCheckboxes.length; i++) {
-			//     const stockValue = parseInt(stockInputs[i].value);
-			//     if (sizeCheckboxes[i].checked && (!stockValue || stockValue <= 0)) {
-			//         errorMessage += 'Vui lòng nhập số lượng cho các kích cỡ đã chọn\n';
-			//         isValid = false;
-			//         break;
-			//     }
-			// }
-
-			// if (!isValid) {
-			//     alert(errorMessage);
-			//     e.preventDefault();
-			// }
 		});
 	</script>
 }
