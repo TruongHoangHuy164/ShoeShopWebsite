@@ -270,20 +270,6 @@ namespace ShoeShop.Controllers
                 }
 
 
-                //if (!ModelState.IsValid)
-                //{
-                //    var existingProduct = await _context.Products
-                //        .Include(p => p.ProductSizes)
-                //        .ThenInclude(ps => ps.Size)
-                //        .Include(p => p.ProductImages)
-                //        .FirstOrDefaultAsync(p => p.ProductID == id);
-
-                //    ViewData["CategoryID"] = new SelectList(_context.Categories, "CategoryID", "CategoryName", product.CategoryID);
-                //    ViewData["Sizes"] = _context.Sizes.ToList();
-                //    ViewData["ExistingSizes"] = existingProduct.ProductSizes.Select(ps => ps.SizeID).ToList();
-                //    return View(existingProduct);
-                //}
-
                 // Get existing product to update
                 var productToUpdate = await _context.Products
                     .Include(p => p.ProductSizes)
