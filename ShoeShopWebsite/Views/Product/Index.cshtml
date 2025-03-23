@@ -22,6 +22,7 @@
                         <th>Hình ảnh</th>
                         <th>Tên sản phẩm</th>
                         <th>Danh mục</th>
+                        <th>Màu sắc</th>
                         <th>Mô tả</th>
                         <th>Giá</th>
                         <th>Ngày tạo</th>
@@ -52,6 +53,21 @@
                             </td>
                             <td>@item.ProductName</td>
                             <td>@item.Category?.CategoryName</td>
+                            <td>
+                                @if (item.ProductColors != null && item.ProductColors.Any())
+                                {
+                                    <div class="d-flex justify-content-center">
+                                        @foreach (var productColor in item.ProductColors)
+                                        {
+                                            <span class="badge bg-secondary mx-1">@productColor.Color.ColorName</span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span>Không có</span>
+                                }
+                            </td>
                             <td>@item.Description</td>
                             <td>@item.Price.ToString("N0") đ</td>
                             <td>@item.CreatedAt.ToString("dd/MM/yyyy")</td>

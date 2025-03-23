@@ -57,13 +57,14 @@ namespace ShoeShop.Controllers
             ViewBag.CategoryID = new SelectList(_context.Categories, "CategoryID", "CategoryName");
             //ViewData["CategoryID"] = new SelectList(_context.Categories, "CategoryID", "CategoryName");
             ViewData["Sizes"] = _context.Sizes.ToList();
+            ViewData["Colors"] = _context.Colors.ToList(); // Gửi danh sách màu
             return View();
         }
 
         // POST: Product/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Product product, List<int> selectedSizes, List<int> stockQuantities, List<IFormFile> imageFiles)
+        public async Task<IActionResult> Create(Product product, List<int> selectedSizes, List<int> selectedColors, List<int> stockQuantities, List<IFormFile> imageFiles)
         {
             try
             {
@@ -72,6 +73,7 @@ namespace ShoeShop.Controllers
                 {
                     ModelState.AddModelError("", "Dữ liệu sản phẩm không hợp lệ");
                     ViewData["CategoryID"] = new SelectList(_context.Categories, "CategoryID", "CategoryName");
+                    ViewData["Colors"] = _context.Colors.ToList();
                     ViewData["Sizes"] = _context.Sizes.ToList();
                     return View(product);
                 }
@@ -95,6 +97,7 @@ namespace ShoeShop.Controllers
                 if (!ModelState.IsValid)
                 {
                     ViewData["CategoryID"] = new SelectList(_context.Categories, "CategoryID", "CategoryName", product.CategoryID);
+                    ViewData["Colors"] = _context.Colors.ToList();
                     ViewData["Sizes"] = _context.Sizes.ToList();
                     return View(product);
                 }
@@ -124,6 +127,18 @@ namespace ShoeShop.Controllers
                             };
                             _context.ProductSizes.Add(productSize);
                         }
+                    }
+                    await _context.SaveChangesAsync();
+                }
+                if (selectedColors != null)
+                {
+                    foreach (var colorId in selectedColors)
+                    {
+                        _context.ProductColors.Add(new ProductColor
+                        {
+                            ProductID = product.ProductID,
+                            ColorID = colorId
+                        });
                     }
                     await _context.SaveChangesAsync();
                 }
@@ -168,6 +183,7 @@ namespace ShoeShop.Controllers
                 Console.WriteLine($"Tên sản phẩm: {product?.ProductName}");
                 Console.WriteLine($"Danh mục ID: {product?.CategoryID}");
                 Console.WriteLine($"Giá sản phẩm: {product?.Price}");
+                Console.WriteLine($"Màu {selectedColors?.Count}");
                 Console.WriteLine($"Số lượng sizes: {selectedSizes?.Count}");
                 Console.WriteLine($"Số lượng ảnh: {imageFiles?.Count}");
                 return RedirectToAction(nameof(Index));
@@ -183,6 +199,7 @@ namespace ShoeShop.Controllers
 
                 ModelState.AddModelError("", $"Có lỗi xảy ra: {ex.Message}");
                 ViewData["CategoryID"] = new SelectList(_context.Categories, "CategoryID", "CategoryName", product.CategoryID);
+                ViewData["Colors"] = _context.Colors.ToList();
                 ViewData["Sizes"] = _context.Sizes.ToList();
                 return View(product);
             }
