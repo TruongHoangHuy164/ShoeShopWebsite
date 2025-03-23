@@ -1,9 +1,130 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
-    
+﻿@model IEnumerable<ShoeShopWebsite.Models.Product>
+
+@{
+    ViewData["Title"] = "Trang chủ - ShoeShop";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Hello</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<!-- Banner -->
+<div class="container-fluid p-0 mb-4">
+    <div id="bannerCarousel" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-inner">
+            <div class="carousel-item active">
+                <img src="~/images/banner1.png" class="d-block w-100" alt="Banner 1" style="height: 500px; object-fit: cover;">
+          
+            </div>
+            <div class="carousel-item">
+                <img src="/images/banner2.jpg" class="d-block w-100" alt="Banner 2" style="height: 400px; object-fit: cover;">
+                <div class="carousel-caption d-none d-md-block">
+                    <h1 class="display-4 text-white">Ưu đãi đặc biệt!</h1>
+                    <p class="text-white">Giảm giá lên đến 50% cho các sản phẩm chọn lọc.</p>
+                </div>
+            </div>
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#bannerCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#bannerCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+    </div>
 </div>
+
+<!-- Main Content -->
+<div class="container">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-3 col-md-4 mb-4">
+            <div class="bg-light p-4 rounded">
+                <h4 class="mb-3">Danh mục</h4>
+                <ul class="list-group mb-3">
+                    <li class="list-group-item"><a href="#" class="text-dark">Sneaker</a></li>
+                    <li class="list-group-item"><a href="#" class="text-dark">Boots</a></li>
+                    <li class="list-group-item"><a href="#" class="text-dark">Sandal</a></li>
+                    <li class="list-group-item"><a href="#" class="text-dark">Giày thể thao</a></li>
+                </ul>
+
+                <h4 class="mb-3">Lọc theo màu sắc</h4>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" value="Red" id="colorRed">
+                    <label class="form-check-label" for="colorRed">Đỏ</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" value="Blue" id="colorBlue">
+                    <label class="form-check-label" for="colorBlue">Xanh dương</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" value="Green" id="colorGreen">
+                    <label class="form-check-label" for="colorGreen">Xanh lá</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Grid -->
+        <div class="col-lg-9 col-md-8">
+            <h3 class="mb-4">Sản phẩm nổi bật</h3>
+            <div class="row row-cols-1 row-cols-md-3 g-4">
+                @foreach (var product in Model)
+                {
+                    <div class="col">
+                        <div class="card h-100 shadow-sm">
+                            @if (product.ProductImages != null && product.ProductImages.Any())
+                            {
+                                var primaryImage = product.ProductImages.FirstOrDefault(img => img.IsPrimary) ?? product.ProductImages.First();
+                                <img src="@primaryImage.ImageURL" class="card-img-top" alt="@product.ProductName" style="height: 200px; object-fit: cover;">
+                            }
+                            else
+                            {
+                                <img src="/images/no-image.png" class="card-img-top" alt="No Image" style="height: 200px; object-fit: cover;">
+                            }
+                            <div class="card-body">
+                                <h5 class="card-title">@product.ProductName</h5>
+                                <p class="card-text text-muted">@(product.Description?.Length > 100 ? product.Description.Substring(0, 100) + "..." : product.Description)</p>
+                                <p class="card-text">
+                                    <strong>@product.Price.ToString("N0") đ</strong>
+                                </p>
+                                @if (product.ProductColors != null && product.ProductColors.Any())
+                                {
+                                    <div class="mb-2">
+                                        @foreach (var color in product.ProductColors)
+                                        {
+                                            if (color.Color != null)
+                                            {
+                                                <span class="badge bg-secondary me-1">@color.Color.ColorName</span>
+                                            }
+                                        }
+                                    </div>
+                                }
+                            </div>
+                            <div class="card-footer text-center border-0 bg-transparent">
+                                <a href="@Url.Action("Details", "Product", new { id = product.ProductID })" class="btn btn-primary btn-sm">Xem chi tiết</a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card:hover {
+        transform: translateY(-5px);
+        transition: transform 0.3s ease;
+    }
+
+    .card-img-top {
+        border-bottom: 1px solid #ddd;
+    }
+
+    .list-group-item a:hover {
+        text-decoration: none;
+        color: #007bff;
+    }
+
+    .carousel-caption {
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 10px;
+    }
+</style>
