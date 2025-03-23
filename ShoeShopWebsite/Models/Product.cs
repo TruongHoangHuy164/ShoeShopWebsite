@@ -22,10 +22,6 @@ namespace ShoeShopWebsite.Models
 
         public ICollection<ProductSize> ProductSizes { get; set; } = new List<ProductSize>();
         public ICollection<ProductImage> ProductImages { get; set; } = new List<ProductImage>();
-        public ICollection<ProductColor> ProductColors { get; set; }
-
-
-        //public ICollection<ProductImage> ProductImages { get; set; }
-        //public ICollection<ProductSize> ProductSizes { get; set; }
+        public ICollection<ProductColor> ProductColors { get; set; } = new List<ProductColor>();
     }
 }
