@@ -1,0 +1,123 @@
+﻿@model List<ShoeShopWebsite.Models.Cart>
+
+@{
+    ViewData["Title"] = "Giỏ hàng - ShoeShopWebsite";
+}
+
+<div class="container mt-5">
+    <h2 class="mb-4">Giỏ hàng của bạn</h2>
+
+    @if (Model == null || !Model.Any())
+    {
+        <div class="alert alert-info" role="alert">
+            Giỏ hàng của bạn đang trống. <a asp-controller="Product" asp-action="Index" class="alert-link">Tiếp tục mua sắm</a>.
+        </div>
+    }
+    else
+    {
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Hình ảnh</th>
+                    <th>Tên sản phẩm</th>
+                    <th>Kích thước</th>
+                    <th>Giá</th>
+                    <th>Số lượng</th>
+                    <th>Tổng</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr data-cart-id="@item.CartID">
+                        <td>
+                            <img src="@(item.Product.ProductImages?.FirstOrDefault()?.ImageURL ?? "/images/no-image.png")" alt="@item.Product.ProductName" style="width: 50px; height: 50px; object-fit: cover;" />
+                        </td>
+                        <td>@item.Product.ProductName</td>
+                        <td>@item.Size.SizeName</td>
+                        <td>@item.Product.Price.ToString("N0") đ</td>
+                        <td>@item.Quantity</td>
+                        <td>@((item.Product.Price * item.Quantity).ToString("N0")) đ</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm remove-from-cart" data-cart-id="@item.CartID">
+                                <i class="bi bi-trash"></i> Xóa
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="5" class="text-end"><strong>Tổng cộng:</strong></td>
+                    <td><strong>@Model.Sum(item => item.Product.Price * item.Quantity).ToString("N0") đ</strong></td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="text-end">
+            <a asp-controller="Product" asp-action="Index" class="btn btn-secondary">Tiếp tục mua sắm</a>
+            <a asp-controller="Checkout" asp-action="Index" class="btn btn-primary">Thanh toán</a>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('.remove-from-cart').on('click', function () {
+                var cartId = $(this).data('cart-id');
+                var $row = $(this).closest('tr');
+
+                // Hiển thị loading
+                showLoading();
+
+                $.ajax({
+                    url: '@Url.Action("RemoveFromCart", "Cart")',
+                    type: 'POST',
+                    data: { cartId: cartId },
+                    success: function (response) {
+                        hideLoading();
+                        if (response.success) {
+                            // Hiển thị thông báo toast
+                            showToast(response.message, true);
+                            // Xóa dòng khỏi bảng
+                            $row.remove();
+                            // Cập nhật tổng tiền
+                            updateCartTotal();
+                            // Kích hoạt sự kiện cập nhật số lượng giỏ hàng
+                            $(document).trigger('cart-updated');
+                        } else {
+                            showToast(response.message, false);
+                        }
+                    },
+                    error: function () {
+                        hideLoading();
+                        showToast('Đã có lỗi xảy ra. Vui lòng thử lại sau.', false);
+                    }
+                });
+            });
+
+            // Hàm cập nhật tổng tiền
+            function updateCartTotal() {
+                var total = 0;
+                $('tbody tr').each(function () {
+                    var price = parseFloat($(this).find('td:eq(3)').text().replace(/[^0-9.-]+/g, ""));
+                    var quantity = parseInt($(this).find('td:eq(4)').text());
+                    total += price * quantity;
+                });
+                $('tfoot td:eq(1)').text(total.toLocaleString('vi-VN') + ' đ');
+
+                // Nếu không còn sản phẩm, hiển thị thông báo giỏ hàng trống
+                if ($('tbody tr').length === 0) {
+                    $('.container.mt-5').html(`
+                        <div class="alert alert-info" role="alert">
+                            Giỏ hàng của bạn đang trống. <a href="@Url.Action("Index", "Product")" class="alert-link">Tiếp tục mua sắm</a>.
+                        </div>
+                    `);
+                }
+            }
+        });
+    </script>
+}

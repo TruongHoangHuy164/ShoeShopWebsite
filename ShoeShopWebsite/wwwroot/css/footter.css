@@ -1,0 +1,34 @@
+﻿
+footer.bg-dark {
+    background-color: #212529 !important;
+}
+
+footer h5 {
+    font-weight: 600;
+    color: #ffffff;
+}
+
+footer ul.list-unstyled li {
+    margin-bottom: 10px;
+}
+
+    footer ul.list-unstyled li a {
+        transition: color 0.3s ease;
+    }
+
+        footer ul.list-unstyled li a:hover {
+            color: #007bff !important;
+        }
+
+footer .bi {
+    transition: transform 0.3s ease;
+}
+
+    footer .bi:hover {
+        transform: scale(1.2);
+    }
+
+footer hr {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+

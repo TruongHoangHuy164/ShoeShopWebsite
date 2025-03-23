@@ -1,16 +1,14 @@
 ﻿@model IEnumerable<ShoeShopWebsite.Models.Product>
 
 @{
-    ViewData["Title"] = "Trang chủuuuu - ShoeShopWebsite";
+    ViewData["Title"] = "Trang chủ - ShoeShopWebsite";
 }
 
-<!-- Banner -->
 <div class="container-fluid p-0 mb-4">
     <div id="bannerCarousel" class="carousel slide" data-bs-ride="carousel">
         <div class="carousel-inner">
             <div class="carousel-item active">
                 <img src="~/images/banner1.png" class="d-block w-100" alt="Banner 1" style="height: 500px; object-fit: cover;">
-          
             </div>
             <div class="carousel-item">
                 <img src="/images/banner2.png" class="d-block w-100" alt="Banner 2" style="height: 500px; object-fit: cover;">
@@ -31,48 +29,19 @@
     </div>
 </div>
 
-<!-- Main Content -->
 <div class="container">
     <div class="row">
-        <!-- Sidebar -->
-        <div class="col-lg-3 col-md-4 mb-4">
-            <div class="bg-light p-4 rounded">
-                <h4 class="mb-3">Danh mục</h4>
-                <ul class="list-group mb-3">
-                    <li class="list-group-item"><a href="#" class="text-dark">Sneaker</a></li>
-                    <li class="list-group-item"><a href="#" class="text-dark">Boots</a></li>
-                    <li class="list-group-item"><a href="#" class="text-dark">Sandal</a></li>
-                    <li class="list-group-item"><a href="#" class="text-dark">Giày thể thao</a></li>
-                </ul>
-
-                <h4 class="mb-3">Lọc theo màu sắc</h4>
-                <div class="form-check mb-2">
-                    <input class="form-check-input" type="checkbox" value="Red" id="colorRed">
-                    <label class="form-check-label" for="colorRed">Đỏ</label>
-                </div>
-                <div class="form-check mb-2">
-                    <input class="form-check-input" type="checkbox" value="Blue" id="colorBlue">
-                    <label class="form-check-label" for="colorBlue">Xanh dương</label>
-                </div>
-                <div class="form-check mb-2">
-                    <input class="form-check-input" type="checkbox" value="Green" id="colorGreen">
-                    <label class="form-check-label" for="colorGreen">Xanh lá</label>
-                </div>
-            </div>
-        </div>
-
-        <!-- Product Grid -->
-        <div class="col-lg-9 col-md-8">
-            <h3 class="mb-4">Sản phẩm nổi bật</h3>
-            <div class="row row-cols-1 row-cols-md-3 g-4">
+        <div class="col-12">
+            <h3 class="mb-4 text-center">Sản phẩm nổi bật</h3>
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4 justify-content-center">
                 @foreach (var product in Model)
                 {
                     <div class="col">
-                        <div class="card h-100 shadow-sm">
+                        <div class="card h-200 shadow-sm">
                             @if (product.ProductImages != null && product.ProductImages.Any())
                             {
                                 var primaryImage = product.ProductImages.FirstOrDefault(img => img.IsPrimary) ?? product.ProductImages.First();
-                                <img src="@primaryImage.ImageURL" class="card-img-top" alt="@product.ProductName" style="height: 200px; object-fit: cover;">
+                                <img src="@primaryImage.ImageURL" class="card-img-top" alt="@product.ProductName" style="height: 300px; object-fit: cover;">
                             }
                             else
                             {
@@ -96,9 +65,22 @@
                                         }
                                     </div>
                                 }
+                                <div class="mb-2">
+                                    <label for="size-@product.ProductID" class="form-label">Kích thước:</label>
+                                    <select id="size-@product.ProductID" class="form-select form-select-sm size-select" data-product-id="@product.ProductID">
+                                        <option value="">Chọn kích thước</option>
+                                        @foreach (var size in ViewBag.Sizes)
+                                        {
+                                            <option value="@size.SizeID">@size.SizeName</option>
+                                        }
+                                    </select>
+                                </div>
                             </div>
-                            <div class="card-footer text-center border-0 bg-transparent">
+                            <div class="card-footer text-center border-0 bg-transparent d-flex justify-content-center gap-2">
                                 <a href="@Url.Action("Details", "Product", new { id = product.ProductID })" class="btn btn-primary btn-sm">Xem chi tiết</a>
+                                <button class="btn btn-success btn-sm add-to-cart" data-product-id="@product.ProductID">
+                                    <i class="bi bi-cart-plus me-1"></i> Thêm vào giỏ
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -118,13 +100,72 @@
         border-bottom: 1px solid #ddd;
     }
 
-    .list-group-item a:hover {
-        text-decoration: none;
-        color: #007bff;
-    }
-
     .carousel-caption {
         background: rgba(0, 0, 0, 0.5);
         border-radius: 10px;
     }
+
+    .row.justify-content-center {
+        display: flex;
+        justify-content: center;
+    }
+
+    .card {
+        max-width: 300px;
+        margin: 0 auto;
+    }
+
+    .btn.add-to-cart {
+        background-color: #28a745;
+        border: none;
+        transition: background-color 0.3s ease;
+    }
+
+    .btn.add-to-cart:hover {
+        background-color: #218838;
+    }
+
+    .btn.add-to-cart i {
+        font-size: 1rem;
+    }
 </style>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('.add-to-cart').on('click', function () {
+                var productId = $(this).data('product-id');
+                var sizeId = $('#size-' + productId).val();
+
+                if (!sizeId) {
+                    showToast('Vui lòng chọn kích thước trước khi thêm vào giỏ hàng!', false);
+                    return;
+                }
+
+                // Hiển thị loading
+                showLoading();
+
+                $.ajax({
+                    url: '@Url.Action("AddToCart", "Cart")',
+                    type: 'POST',
+                    data: { productId: productId, sizeId: sizeId },
+                    success: function (response) {
+                        hideLoading();
+                        if (response.success) {
+                            showToast(response.message, true);
+                            // Cập nhật số lượng giỏ hàng
+                            $('.cart-count').text(`Cart (${response.cartCount})`);
+                            $(document).trigger('cart-updated');
+                        } else {
+                            showToast(response.message, false);
+                        }
+                    },
+                    error: function () {
+                        hideLoading();
+                        showToast('Đã có lỗi xảy ra. Vui lòng thử lại sau.', false);
+                    }
+                });
+            });
+        });
+    </script>
+}
