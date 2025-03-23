@@ -54,155 +54,149 @@ namespace ShoeShop.Controllers
         // GET: Product/Create
         public IActionResult Create()
         {
-            ViewBag.CategoryID = new SelectList(_context.Categories, "CategoryID", "CategoryName");
-            //ViewData["CategoryID"] = new SelectList(_context.Categories, "CategoryID", "CategoryName");
             ViewData["Sizes"] = _context.Sizes.ToList();
-            ViewData["Colors"] = _context.Colors.ToList(); // Gửi danh sách màu
+            ViewData["Colors"] = _context.Colors
+                .Select(c => new SelectListItem
+                {
+                    Value = c.ColorID.ToString(),
+                    Text = c.ColorName
+                }).ToList();
+
+            ViewData["CategoryID"] = new SelectList(_context.Categories, "CategoryID", "CategoryName");
             return View();
         }
 
         // POST: Product/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
+
         public async Task<IActionResult> Create(Product product, List<int> selectedSizes, List<int> selectedColors, List<int> stockQuantities, List<IFormFile> imageFiles)
         {
             try
             {
-                // Kiểm tra dữ liệu đầu vào
+                // 1️⃣ Kiểm tra dữ liệu đầu vào
                 if (product == null)
                 {
-                    ModelState.AddModelError("", "Dữ liệu sản phẩm không hợp lệ");
-                    ViewData["CategoryID"] = new SelectList(_context.Categories, "CategoryID", "CategoryName");
-                    ViewData["Colors"] = _context.Colors.ToList();
-                    ViewData["Sizes"] = _context.Sizes.ToList();
-                    return View(product);
+                    ModelState.AddModelError("", "Dữ liệu sản phẩm không hợp lệ.");
                 }
-
-                // Kiểm tra các trường bắt buộc
                 if (string.IsNullOrEmpty(product.ProductName))
                 {
-                    ModelState.AddModelError("ProductName", "Tên sản phẩm là bắt buộc");
+                    ModelState.AddModelError("ProductName", "Tên sản phẩm là bắt buộc.");
                 }
-
                 if (product.CategoryID <= 0)
                 {
-                    ModelState.AddModelError("CategoryID", "Vui lòng chọn danh mục");
+                    ModelState.AddModelError("CategoryID", "Vui lòng chọn danh mục.");
                 }
-
                 if (product.Price <= 0)
                 {
-                    ModelState.AddModelError("Price", "Giá phải lớn hơn 0");
+                    ModelState.AddModelError("Price", "Giá sản phẩm phải lớn hơn 0.");
                 }
 
                 if (!ModelState.IsValid)
                 {
-                    ViewData["CategoryID"] = new SelectList(_context.Categories, "CategoryID", "CategoryName", product.CategoryID);
-                    ViewData["Colors"] = _context.Colors.ToList();
-                    ViewData["Sizes"] = _context.Sizes.ToList();
+                    LoadViewData(product);
                     return View(product);
                 }
 
-                // Set creation date
+                // 2️⃣ Lưu sản phẩm vào DB
                 product.CreatedAt = DateTime.Now;
-
-                // Add product to database
                 _context.Products.Add(product);
                 await _context.SaveChangesAsync();
+                Console.WriteLine($"✅ Đã lưu sản phẩm ID: {product.ProductID}");
 
-                // Ghi log để debug
-                Console.WriteLine($"Đã lưu sản phẩm với ID: {product.ProductID}");
-
-                // Handle product sizes
-                if (selectedSizes != null && stockQuantities != null)
+                // 3️⃣ Lưu kích thước & số lượng
+                if (selectedSizes != null && stockQuantities != null && selectedSizes.Count == stockQuantities.Count)
                 {
-                    for (int i = 0; i < Math.Min(selectedSizes.Count, stockQuantities.Count); i++)
+                    var productSizes = new List<ProductSize>();
+                    for (int i = 0; i < selectedSizes.Count; i++)
                     {
                         if (stockQuantities[i] > 0)
                         {
-                            ProductSize productSize = new ProductSize
+                            productSizes.Add(new ProductSize
                             {
                                 ProductID = product.ProductID,
                                 SizeID = selectedSizes[i],
                                 Stock = stockQuantities[i]
-                            };
-                            _context.ProductSizes.Add(productSize);
+                            });
                         }
                     }
+                    _context.ProductSizes.AddRange(productSizes);
                     await _context.SaveChangesAsync();
-                }
-                if (selectedColors != null)
-                {
-                    foreach (var colorId in selectedColors)
-                    {
-                        _context.ProductColors.Add(new ProductColor
-                        {
-                            ProductID = product.ProductID,
-                            ColorID = colorId
-                        });
-                    }
-                    await _context.SaveChangesAsync();
+                    Console.WriteLine($"✅ Đã lưu {productSizes.Count} kích thước.");
                 }
 
-                // Handle product images
+                // 4️⃣ Lưu màu sắc
+                if (selectedColors != null && selectedColors.Any())
+                {
+                    var productColors = selectedColors.Select(colorId => new ProductColor
+                    {
+                        ProductID = product.ProductID,
+                        ColorID = colorId
+                    }).ToList();
+                    _context.ProductColors.AddRange(productColors);
+                    await _context.SaveChangesAsync();
+                    Console.WriteLine($"✅ Đã lưu {productColors.Count} màu sắc.");
+                }
+
+                // 5️⃣ Lưu ảnh sản phẩm
                 if (imageFiles != null && imageFiles.Count > 0)
                 {
+                    string uploadPath = Path.Combine(_hostEnvironment.WebRootPath, "images", "products");
+
+                    if (!Directory.Exists(uploadPath))
+                    {
+                        Directory.CreateDirectory(uploadPath);
+                    }
+
+                    var productImages = new List<ProductImage>();
                     foreach (var imageFile in imageFiles)
                     {
                         if (imageFile != null && imageFile.Length > 0)
                         {
-                            // Create unique filename
-                            string fileName = Guid.NewGuid().ToString() + Path.GetExtension(imageFile.FileName);
-                            string uploadPath = Path.Combine(_hostEnvironment.WebRootPath, "images", "products");
-
-                            // Create directory if it doesn't exist
-                            if (!Directory.Exists(uploadPath))
-                            {
-                                Directory.CreateDirectory(uploadPath);
-                            }
-
+                            string fileName = Guid.NewGuid() + Path.GetExtension(imageFile.FileName);
                             string filePath = Path.Combine(uploadPath, fileName);
 
-                            // Save file
                             using (var fileStream = new FileStream(filePath, FileMode.Create))
                             {
                                 await imageFile.CopyToAsync(fileStream);
                             }
 
-                            // Save image info to database
-                            ProductImage productImage = new ProductImage
+                            productImages.Add(new ProductImage
                             {
                                 ProductID = product.ProductID,
                                 ImageURL = "/images/products/" + fileName,
-                                IsPrimary = !_context.ProductImages.Any(pi => pi.ProductID == product.ProductID) // First image is primary
-                            };
-                            _context.ProductImages.Add(productImage);
+                                IsPrimary = productImages.Count == 0 // Ảnh đầu tiên là ảnh chính
+                            });
                         }
                     }
+
+                    _context.ProductImages.AddRange(productImages);
                     await _context.SaveChangesAsync();
+                    Console.WriteLine($"✅ Đã lưu {productImages.Count} ảnh.");
                 }
-                Console.WriteLine($"Tên sản phẩm: {product?.ProductName}");
-                Console.WriteLine($"Danh mục ID: {product?.CategoryID}");
-                Console.WriteLine($"Giá sản phẩm: {product?.Price}");
-                Console.WriteLine($"Màu {selectedColors?.Count}");
-                Console.WriteLine($"Số lượng sizes: {selectedSizes?.Count}");
-                Console.WriteLine($"Số lượng ảnh: {imageFiles?.Count}");
+
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
-                // Ghi log lỗi
-                Console.WriteLine($"Lỗi khi tạo sản phẩm: {ex.Message}");
+                Console.WriteLine($"❌ Lỗi khi tạo sản phẩm: {ex.Message}");
                 if (ex.InnerException != null)
                 {
-                    Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+                    Console.WriteLine($"🔍 Inner Exception: {ex.InnerException.Message}");
                 }
 
                 ModelState.AddModelError("", $"Có lỗi xảy ra: {ex.Message}");
-                ViewData["CategoryID"] = new SelectList(_context.Categories, "CategoryID", "CategoryName", product.CategoryID);
-                ViewData["Colors"] = _context.Colors.ToList();
-                ViewData["Sizes"] = _context.Sizes.ToList();
+                LoadViewData(product);
                 return View(product);
             }
+        }
+
+        // Hàm load dữ liệu dropdown (Màu sắc, Size, Danh mục)
+        private void LoadViewData(Product product)
+        {
+            ViewData["CategoryID"] = new SelectList(_context.Categories, "CategoryID", "CategoryName", product?.CategoryID);
+            ViewData["Colors"] = _context.Colors.ToList();
+            ViewData["Sizes"] = _context.Sizes.ToList();
         }
 
         // GET: Product/Edit/5
