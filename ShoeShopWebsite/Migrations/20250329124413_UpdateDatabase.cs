@@ -1,0 +1,70 @@
+﻿using Microsoft.EntityFrameworkCore.Migrations;
+
+#nullable disable
+
+namespace ShoeShopWebsite.Migrations
+{
+    /// <inheritdoc />
+    public partial class UpdateDatabase : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.AddColumn<int>(
+                name: "ColorID",
+                table: "Orders",
+                type: "int",
+                nullable: false,
+                defaultValue: 0);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Orders_ColorID",
+                table: "Orders",
+                column: "ColorID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderDetails_ColorID",
+                table: "OrderDetails",
+                column: "ColorID");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_OrderDetails_Colors_ColorID",
+                table: "OrderDetails",
+                column: "ColorID",
+                principalTable: "Colors",
+                principalColumn: "ColorID");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_Orders_Colors_ColorID",
+                table: "Orders",
+                column: "ColorID",
+                principalTable: "Colors",
+                principalColumn: "ColorID",
+                onDelete: ReferentialAction.Cascade);
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropForeignKey(
+                name: "FK_OrderDetails_Colors_ColorID",
+                table: "OrderDetails");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_Orders_Colors_ColorID",
+                table: "Orders");
+
+            migrationBuilder.DropIndex(
+                name: "IX_Orders_ColorID",
+                table: "Orders");
+
+            migrationBuilder.DropIndex(
+                name: "IX_OrderDetails_ColorID",
+                table: "OrderDetails");
+
+            migrationBuilder.DropColumn(
+                name: "ColorID",
+                table: "Orders");
+        }
+    }
+}
