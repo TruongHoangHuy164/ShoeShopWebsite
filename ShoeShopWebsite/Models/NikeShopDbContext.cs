@@ -21,7 +21,8 @@ namespace ShoeShopWebsite.Models
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderDetail> OrderDetails { get; set; }
         public DbSet<Review> Reviews { get; set; }
-        
+        public DbSet<Wishlist> Wishlist { get; set; }
+
         // public DbSet<Payment> Payments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

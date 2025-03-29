@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ShoeShopWebsite.Models;
 
@@ -7,24 +7,27 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// Th�m d?ch v? Session
-builder.Services.AddDistributedMemoryCache(); // S? d?ng b? nh? ??m trong b? nh?
+// Thêm dịch vụ Session
+builder.Services.AddDistributedMemoryCache(); // Sử dụng bộ nhớ đệm trong bộ nhớ
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromMinutes(30); // Th?i gian timeout c?a Session (30 ph�t)
-    options.Cookie.HttpOnly = true; // Cookie ch? c� th? truy c?p qua HTTP
-    options.Cookie.IsEssential = true; // Cookie c?n thi?t ?? tu�n th? GDPR
+    options.IdleTimeout = TimeSpan.FromMinutes(30); // Thời gian timeout của Session (30 phút)
+    options.Cookie.HttpOnly = true; // Cookie chỉ có thể truy cập qua HTTP
+    options.Cookie.IsEssential = true; // Cookie cần thiết để tuân thủ GDPR
 });
 
-// Th�m DbContext
+// Thêm DbContext
 builder.Services.AddDbContext<NikeShopDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("NikeShopDb")));
 
-// Th�m Identity
+// Thêm Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddDefaultTokenProviders()
     .AddDefaultUI()
     .AddEntityFrameworkStores<NikeShopDbContext>();
+
+// Thêm IHttpClientFactory để hỗ trợ gửi HTTP request (dùng cho MoMo)
+builder.Services.AddHttpClient();
 
 builder.Services.AddRazorPages();
 
@@ -38,12 +41,12 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles(); // Th�m d�ng n�y ?? ph?c v? file t?nh
+app.UseStaticFiles(); // Phục vụ file tĩnh
 
 app.UseRouting();
 
-// Th�m middleware Session
-app.UseSession(); // ??m b?o g?i sau UseRouting v� tr??c UseAuthorization
+// Thêm middleware Session
+app.UseSession(); // Đảm bảo gọi sau UseRouting và trước UseAuthorization
 
 app.UseAuthorization();
 

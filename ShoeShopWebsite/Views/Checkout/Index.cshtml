@@ -1,0 +1,128 @@
+﻿@model List<ShoeShopWebsite.Models.Cart>
+
+@{
+    ViewData["Title"] = "Thanh toán - ShoeShopWebsite";
+}
+
+<div class="container mt-5">
+    <h2 class="mb-4">Thanh toán</h2>
+
+    @if (Model.Any())
+    {
+        <div class="row">
+            <div class="col-lg-8">
+                <table class="table table-bordered table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Hình ảnh</th>
+                            <th>Sản phẩm</th>
+                            <th>Kích thước</th>
+                            <th>Màu sắc</th>
+                            <th>Giá</th>
+                            <th>Số lượng</th>
+                            <th>Tổng</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <img src="@(item.Product.ProductImages?.FirstOrDefault()?.ImageURL ?? "/images/no-image.png")"
+                                         alt="@item.Product.ProductName"
+                                         style="width: 50px; height: 50px; object-fit: cover;" />
+                                </td>
+                                <td>@item.Product.ProductName</td>
+                                <td>@item.Size.SizeName</td>
+                                <td>@(item.Color?.ColorName ?? "Không có màu")</td>
+                                <td>@item.Product.Price.ToString("N0") đ</td>
+                                <td>@item.Quantity</td>
+                                <td>@((item.Product.Price * item.Quantity).ToString("N0")) đ</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-bold">
+                            <td colspan="6" class="text-end">Tổng cộng:</td>
+                            <td>@Model.Sum(item => item.Product.Price * item.Quantity).ToString("N0") đ</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="col-lg-4">
+                <div class="card p-4 shadow-sm">
+                    <h4 class="mb-3">Chọn phương thức thanh toán</h4>
+                    <form id="paymentForm">
+                        <div class="mb-3">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="paymentMethod" id="momo" value="MoMo" required>
+                                <label class="form-check-label" for="momo">
+                                    <img src="/images/momo.png" alt="MoMo" style="width: 30px; vertical-align: middle;"> Thanh toán qua MoMo
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="paymentMethod" id="vnpay" value="VNPay">
+                                <label class="form-check-label" for="vnpay">
+                                    <img src="/images/vnpay.png" alt="VNPay" style="width: 30px; vertical-align: middle;"> Thanh toán qua VNPay
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="paymentMethod" id="cash" value="Cash">
+                                <label class="form-check-label" for="cash">
+                                    <i class="bi bi-cash-stack me-1"></i> Thanh toán tiền mặt khi nhận hàng
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Thanh toán</button>
+                    </form>
+                    <div id="paymentMessage" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            Giỏ hàng của bạn trống. <a href="@Url.Action("Index", "Home")" class="alert-link">Tiếp tục mua sắm</a>.
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script>
+        $(document).ready(function () {
+            $('#paymentForm').on('submit', function (e) {
+                e.preventDefault();
+                const paymentMethod = $('input[name="paymentMethod"]:checked').val();
+
+                if (!paymentMethod) {
+                    $('#paymentMessage').html('<div class="alert alert-danger">Vui lòng chọn phương thức thanh toán!</div>');
+                    return;
+                }
+
+                $.ajax({
+                    url: '@Url.Action("ProcessPayment", "Checkout")',
+                    type: 'POST',
+                    data: { paymentMethod: paymentMethod },
+                    headers: { 'X-CSRF-TOKEN': $('input[name="__RequestVerificationToken"]').val() },
+                    success: function (response) {
+                        if (response.success) {
+                            if (response.redirectUrl) {
+                                window.location.href = response.redirectUrl;
+                            }
+                            if (response.message) {
+                                $('#paymentMessage').html('<div class="alert alert-success">' + response.message + '</div>');
+                            }
+                        } else {
+                            $('#paymentMessage').html('<div class="alert alert-danger">' + response.message + '</div>');
+                        }
+                    },
+                    error: function () {
+                        $('#paymentMessage').html('<div class="alert alert-danger">Có lỗi xảy ra khi xử lý thanh toán!</div>');
+                    }
+                });
+            });
+        });
+    </script>
+}

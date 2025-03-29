@@ -6,16 +6,16 @@
 
 <div class="container-fluid p-0 mb-4">
     <div id="bannerCarousel" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-indicators">
+            <button type="button" data-bs-target="#bannerCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+            <button type="button" data-bs-target="#bannerCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
+        </div>
         <div class="carousel-inner">
             <div class="carousel-item active">
-                <img src="~/images/banner1.png" class="d-block w-100" alt="Banner 1" style="height: 500px; object-fit: cover;">
+                <img src="~/images/banner1z.png" class="d-block w-100" alt="Banner 1" style="height: 500px; object-fit: cover;">
             </div>
             <div class="carousel-item">
-                <img src="/images/banner2.png" class="d-block w-100" alt="Banner 2" style="height: 500px; object-fit: cover;">
-                <div class="carousel-caption d-none d-md-block">
-                    <h1 class="display-4 text-white">Ưu đãi đặc biệt!</h1>
-                    <p class="text-white">Giảm giá lên đến 50% cho các sản phẩm chọn lọc.</p>
-                </div>
+                <img src="/images/banner2z.png" class="d-block w-100" alt="Banner 2" style="height: 500px; object-fit: cover;">
             </div>
         </div>
         <button class="carousel-control-prev" type="button" data-bs-target="#bannerCarousel" data-bs-slide="prev">
@@ -33,71 +33,103 @@
     <div class="row">
         <div class="col-12">
             <h3 class="mb-4 text-center">Sản phẩm nổi bật</h3>
-            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4 justify-content-center">
-                @foreach (var product in Model)
-                {
-                    <div class="col">
-                        <div class="card h-200 shadow-sm">
-                            @if (product.ProductImages != null && product.ProductImages.Any())
-                            {
-                                var primaryImage = product.ProductImages.FirstOrDefault(img => img.IsPrimary) ?? product.ProductImages.First();
-                                <img src="@primaryImage.ImageURL" class="card-img-top" alt="@product.ProductName" style="height: 300px; object-fit: cover;">
-                            }
-                            else
-                            {
-                                <img src="/images/no-image.png" class="card-img-top" alt="No Image" style="height: 200px; object-fit: cover;">
-                            }
-                            <div class="card-body">
-                                <h5 class="card-title">@product.ProductName</h5>
-                                <p class="card-text text-muted">@(product.Description?.Length > 100 ? product.Description.Substring(0, 100) + "..." : product.Description)</p>
-                                <p class="card-text">
-                                    <strong>@product.Price.ToString("N0") đ</strong>
-                                </p>
-                                @if (product.ProductColors != null && product.ProductColors.Any())
-                                {
-                                    <div class="mb-2">
-                                        @foreach (var color in product.ProductColors)
+            <div class="products-container position-relative">
+                <div class="products-wrapper d-flex flex-nowrap">
+                    @if (Model != null && Model.Any())
+                    {
+                        @foreach (var product in Model)
+                        {
+                            <div class="product-item px-2" style="flex: 0 0 25%; min-width: 0;">
+                                <div class="card h-100 shadow-sm">
+                                    @if (product.ProductImages != null && product.ProductImages.Any())
+                                    {
+                                        var primaryImage = product.ProductImages.FirstOrDefault(img => img.IsPrimary) ?? product.ProductImages.First();
+                                        <img src="@primaryImage.ImageURL" class="card-img-top" alt="@product.ProductName" style="height: 300px; object-fit: cover;">
+                                    }
+                                    else
+                                    {
+                                        <img src="/images/no-image.png" class="card-img-top" alt="No Image" style="height: 200px; object-fit: cover;">
+                                    }
+                                    <div class="card-body">
+                                        <h5 class="card-title">@product.ProductName</h5>
+                                        <p class="card-text text-muted">
+                                            @(string.IsNullOrEmpty(product.Description) ? "Không có mô tả" : product.Description.Length > 100 ? product.Description.Substring(0, 100) + "..." : product.Description)
+                                        </p>
+                                        <p class="card-text">
+                                            <strong>@product.Price.ToString("N0") đ</strong>
+                                        </p>
+                                        @if (product.ProductColors != null && product.ProductColors.Any())
                                         {
-                                            if (color.Color != null)
-                                            {
-                                                <span class="badge bg-secondary me-1">@color.Color.ColorName</span>
-                                            }
+                                            <div class="mb-2">
+                                                @foreach (var color in product.ProductColors)
+                                                {
+                                                    if (color.Color != null)
+                                                    {
+                                                        <span class="badge bg-secondary me-1">@color.Color.ColorName</span>
+                                                    }
+                                                }
+                                            </div>
                                         }
+                                        <div class="mb-2">
+                                            <label for="size-@product.ProductID" class="form-label">Kích thước:</label>
+                                            <select id="size-@product.ProductID" class="form-select form-select-sm size-select" data-product-id="@product.ProductID">
+                                                <option value="">Chọn kích thước</option>
+                                                @if (ViewBag.Sizes != null)
+                                                {
+                                                    foreach (var size in ViewBag.Sizes as List<ShoeShopWebsite.Models.Size>)
+                                                    {
+                                                        <option value="@size.SizeID">@size.SizeName</option>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <option value="">Không có kích thước nào</option>
+                                                }
+                                            </select>
+                                        </div>
                                     </div>
-                                }
-                                <div class="mb-2">
-                                    <label for="size-@product.ProductID" class="form-label">Kích thước:</label>
-                                    <select id="size-@product.ProductID" class="form-select form-select-sm size-select" data-product-id="@product.ProductID">
-                                        <option value="">Chọn kích thước</option>
-                                        @if (ViewBag.Sizes != null)
-                                        {
-                                            @foreach (var size in ViewBag.Sizes)
-                                            {
-                                                <option value="@size.SizeID">@size.SizeName</option>
-                                            }
-                                        }
-                                        else
-                                        {
-                                            <option value="">Không có kích thước nào</option>
-                                        }
-                                    </select>
+                                    <div class="card-footer text-center border-0 bg-transparent d-flex justify-content-center gap-2">
+                                        <a href="@Url.Action("Details", "Product", new { id = product.ProductID })" class="btn btn-light btn-sm">Xem chi tiết</a>
+                                        <button class="btn btn-light btn-sm add-to-cart" data-product-id="@product.ProductID">
+                                            <i class="bi bi-cart-plus me-1"></i> Thêm vào giỏ
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="card-footer text-center border-0 bg-transparent d-flex justify-content-center gap-2">
-                                <a href="@Url.Action("Details", "Product", new { id = product.ProductID })" class="btn btn-primary btn-sm">Xem chi tiết</a>
-                                <button class="btn btn-success btn-sm add-to-cart" data-product-id="@product.ProductID">
-                                    <i class="bi bi-cart-plus me-1"></i> Thêm vào giỏ
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                }
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-center">Không có sản phẩm nào để hiển thị.</p>
+                    }
+                </div>
+                <button class="products-prev custom-arrow" type="button">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <button class="products-next custom-arrow" type="button">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <style>
+    .products-container {
+        position: relative;
+        overflow: hidden;
+        padding: 0 50px;
+    }
+
+    .products-wrapper {
+        transition: transform 0.5s ease;
+    }
+
+    .product-item {
+        flex: 0 0 25%;
+        max-width: 25%;
+    }
+
     .card:hover {
         transform: translateY(-5px);
         transition: transform 0.3s ease;
@@ -107,83 +139,114 @@
         border-bottom: 1px solid #ddd;
     }
 
+    .custom-arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 40px;
+        height: 40px;
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 10;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+        .custom-arrow:hover {
+            background-color: #f8f9fa;
+            border-color: #aaa;
+        }
+
+    .products-prev {
+        left: 10px;
+    }
+
+    .products-next {
+        right: 10px;
+    }
+
+    .custom-arrow i {
+        font-size: 1.2rem;
+        color: #333;
+    }
+
+    .btn-light {
+        color: #333; /* Màu chữ tối hơn trên nền xám trắng */
+        border-color: #ccc;
+        transition: background-color 0.3s ease;
+    }
+
+        .btn-light:hover {
+            background-color: #e9ecef; /* Hiệu ứng hover nhẹ */
+        }
+
+        .btn-light i {
+            font-size: 1rem;
+        }
+
     .carousel-caption {
         background: rgba(0, 0, 0, 0.5);
         border-radius: 10px;
     }
 
-    .row.justify-content-center {
-        display: flex;
-        justify-content: center;
+    .carousel-indicators {
+        bottom: 10px;
+        margin-bottom: 0;
     }
 
-    .card {
-        max-width: 300px;
-        margin: 0 auto;
-    }
-
-    .btn.add-to-cart {
-        background-color: #28a745;
-        border: none;
-        transition: background-color 0.3s ease;
-    }
-
-        .btn.add-to-cart:hover {
-            background-color: #218838;
+        .carousel-indicators button {
+            width: 6px !important;
+            height: 6px !important;
+            border-radius: 50% !important;
+            background-color: #a9a9a9 !important; /* Xám nhạt */
+            border: none !important;
+            margin: 0 4px;
+            opacity: 0.3;
+            padding: 0; /* Loại bỏ padding mặc định */
         }
 
-        .btn.add-to-cart i {
-            font-size: 1rem;
+        .carousel-indicators .active {
+            opacity: 0.7;
+            background-color: #696969 !important; /* Xám đậm hơn */
         }
 </style>
 
 @section Scripts {
     <script>
-        // Hàm hiển thị loading
-        function showLoading() {
-            if (!$('#loading-overlay').length) {
-                $('body').append(`
-                    <div id="loading-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999; display: flex; justify-content: center; align-items: center;">
-                        <div class="spinner-border text-light" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
-                `);
-            }
-            $('#loading-overlay').show();
-        }
-
-        // Hàm ẩn loading
-        function hideLoading() {
-            $('#loading-overlay').hide();
-        }
-
-        // Hàm hiển thị thông báo toast
-        function showToast(message, isSuccess) {
-            if (!$('#toast-container').length) {
-                $('body').append('<div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>');
-            }
-
-            var toastClass = isSuccess ? 'bg-success' : 'bg-danger';
-            var toastId = 'toast-' + new Date().getTime();
-            var toastHtml = `
-                <div id="${toastId}" class="toast ${toastClass} text-white" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div class="toast-body">
-                        ${message}
-                    </div>
-                </div>
-            `;
-
-            $('#toast-container').append(toastHtml);
-            var $toast = $(`#${toastId}`);
-            $toast.toast({ delay: 3000 });
-            $toast.toast('show');
-            $toast.on('hidden.bs.toast', function () {
-                $(this).remove();
-            });
-        }
-
         $(document).ready(function () {
+            const $wrapper = $('.products-wrapper');
+            const $items = $('.product-item');
+            const itemWidth = $items.length > 0 ? $items.outerWidth(true) : 0;
+            const visibleItems = 4;
+            const totalItems = $items.length;
+            let currentPosition = 0;
+            const maxPosition = Math.max(0, totalItems - visibleItems);
+
+            if (totalItems <= visibleItems || totalItems === 0) {
+                $('.custom-arrow').hide();
+            } else {
+                $('.custom-arrow').show();
+            }
+
+            $('.products-next').click(function () {
+                if (currentPosition < maxPosition) {
+                    currentPosition++;
+                    $wrapper.css('transform', `translateX(-${currentPosition * itemWidth}px)`);
+                }
+            });
+
+            $('.products-prev').click(function () {
+                if (currentPosition > 0) {
+                    currentPosition--;
+                    $wrapper.css('transform', `translateX(-${currentPosition * itemWidth}px)`);
+                }
+            });
+
             $('.add-to-cart').on('click', function () {
                 var productId = $(this).data('product-id');
                 var sizeId = $('#size-' + productId).val();
@@ -203,8 +266,8 @@
                         hideLoading();
                         if (response.success) {
                             showToast(response.message, true);
-                            $('.cart-count').text(`Cart (${response.cartCount})`);
-                            $(document).trigger('cart-updated');
+                            $('#cartCount').text(`Cart (${response.cartCount})`); // Cập nhật trực tiếp
+                            $(document).trigger('cart-updated'); // Phát sự kiện
                         } else {
                             showToast(response.message, false);
                         }
@@ -216,6 +279,47 @@
                     }
                 });
             });
+
+            function showLoading() {
+                if (!$('#loading-overlay').length) {
+                    $('body').append(`
+                        <div id="loading-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999; display: flex; justify-content: center; align-items: center;">
+                            <div class="spinner-border text-light" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    `);
+                }
+                $('#loading-overlay').show();
+            }
+
+            function hideLoading() {
+                $('#loading-overlay').hide();
+            }
+
+            function showToast(message, isSuccess) {
+                if (!$('#toast-container').length) {
+                    $('body').append('<div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>');
+                }
+
+                var toastClass = isSuccess ? 'bg-success' : 'bg-danger';
+                var toastId = 'toast-' + new Date().getTime();
+                var toastHtml = `
+                    <div id="${toastId}" class="toast ${toastClass} text-white" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                    </div>
+                `;
+
+                $('#toast-container').append(toastHtml);
+                var $toast = $(`#${toastId}`);
+                $toast.toast({ delay: 3000 });
+                $toast.toast('show');
+                $toast.on('hidden.bs.toast', function () {
+                    $(this).remove();
+                });
+            }
         });
     </script>
 }

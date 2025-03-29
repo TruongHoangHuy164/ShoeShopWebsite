@@ -29,7 +29,7 @@ namespace ShoeShopWebsite.Controllers
 
             // L?y danh sách kích th??c
             var sizes = await _context.Sizes.ToListAsync();
-
+            
             // Gán danh sách kích th??c vào ViewBag
             ViewBag.Sizes = sizes;
 

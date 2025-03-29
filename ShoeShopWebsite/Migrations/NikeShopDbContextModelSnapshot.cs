@@ -22,36 +22,6 @@ namespace ShoeShopWebsite.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("Cart", b =>
-                {
-                    b.Property<int>("CartID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CartID"));
-
-                    b.Property<int>("ProductID")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<string>("SessionId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("SizeID")
-                        .HasColumnType("int");
-
-                    b.HasKey("CartID");
-
-                    b.HasIndex("ProductID");
-
-                    b.HasIndex("SizeID");
-
-                    b.ToTable("Carts");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -193,6 +163,9 @@ namespace ShoeShopWebsite.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DetailID"));
 
+                    b.Property<int?>("ColorID")
+                        .HasColumnType("int");
+
                     b.Property<int>("OrderID")
                         .HasColumnType("int");
 
@@ -294,6 +267,41 @@ namespace ShoeShopWebsite.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("ShoeShopWebsite.Models.Cart", b =>
+                {
+                    b.Property<int>("CartID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CartID"));
+
+                    b.Property<int?>("ColorID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SessionId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SizeID")
+                        .HasColumnType("int");
+
+                    b.HasKey("CartID");
+
+                    b.HasIndex("ColorID");
+
+                    b.HasIndex("ProductID");
+
+                    b.HasIndex("SizeID");
+
+                    b.ToTable("Carts");
+                });
+
             modelBuilder.Entity("ShoeShopWebsite.Models.Category", b =>
                 {
                     b.Property<int>("CategoryID")
@@ -345,6 +353,11 @@ namespace ShoeShopWebsite.Migrations
 
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -513,23 +526,26 @@ namespace ShoeShopWebsite.Migrations
                     b.ToTable("Sizes");
                 });
 
-            modelBuilder.Entity("Cart", b =>
+            modelBuilder.Entity("ShoeShopWebsite.Models.Wishlist", b =>
                 {
-                    b.HasOne("ShoeShopWebsite.Models.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Property<int>("WishlistID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
 
-                    b.HasOne("ShoeShopWebsite.Models.Size", "Size")
-                        .WithMany()
-                        .HasForeignKey("SizeID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("WishlistID"));
 
-                    b.Navigation("Product");
+                    b.Property<int>("ProductID")
+                        .HasColumnType("int");
 
-                    b.Navigation("Size");
+                    b.Property<string>("UserID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("WishlistID");
+
+                    b.HasIndex("ProductID");
+
+                    b.ToTable("Wishlist");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -610,6 +626,31 @@ namespace ShoeShopWebsite.Migrations
                     b.Navigation("Size");
                 });
 
+            modelBuilder.Entity("ShoeShopWebsite.Models.Cart", b =>
+                {
+                    b.HasOne("ShoeShopWebsite.Models.Color", "Color")
+                        .WithMany()
+                        .HasForeignKey("ColorID");
+
+                    b.HasOne("ShoeShopWebsite.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ShoeShopWebsite.Models.Size", "Size")
+                        .WithMany()
+                        .HasForeignKey("SizeID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Color");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Size");
+                });
+
             modelBuilder.Entity("ShoeShopWebsite.Models.Product", b =>
                 {
                     b.HasOne("ShoeShopWebsite.Models.Category", "Category")
@@ -671,6 +712,17 @@ namespace ShoeShopWebsite.Migrations
                 });
 
             modelBuilder.Entity("ShoeShopWebsite.Models.Review", b =>
+                {
+                    b.HasOne("ShoeShopWebsite.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("ShoeShopWebsite.Models.Wishlist", b =>
                 {
                     b.HasOne("ShoeShopWebsite.Models.Product", "Product")
                         .WithMany()

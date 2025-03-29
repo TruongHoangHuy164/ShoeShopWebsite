@@ -1,0 +1,218 @@
+﻿@model IEnumerable<ShoeShopWebsite.Models.Product>
+
+@{
+    ViewData["Title"] = "Danh sách yêu thích";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid pt-4 px-4">
+    <div class="bg-light rounded p-4">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h3 class="mb-0">@ViewData["Title"]</h3>
+        </div>
+
+        @if (Model != null && Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Sản phẩm</th>
+                            <th scope="col">Ảnh</th>
+                            <th scope="col">Giá</th>
+                            <th scope="col">Kích thước</th>
+                            <th scope="col">Màu sắc</th>
+                            <th scope="col">Số lượng</th>
+                            <th scope="col">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr class="wishlist-item" data-product-id="@item.ProductID">
+                                <td>@item.ProductName</td>
+                                <td>
+                                    @if (item.ProductImages != null && item.ProductImages.Any())
+                                    {
+                                        var primaryImage = item.ProductImages.FirstOrDefault(img => img.IsPrimary) ?? item.ProductImages.First();
+                                        <img src="@primaryImage.ImageURL" alt="@item.ProductName" class="img-fluid" style="max-width: 100px; max-height: 100px; object-fit: cover;">
+                                    }
+                                    else
+                                    {
+                                        <img src="/images/no-image.png" alt="No Image" class="img-fluid" style="max-width: 100px; max-height: 100px; object-fit: cover;">
+                                    }
+                                </td>
+                                <td>@item.Price.ToString("N0") đ</td>
+                                <td>
+                                    <select class="form-select form-select-sm size-select" data-id="@item.ProductID">
+                                        <option value="">Chọn size</option>
+                                        @foreach (var size in item.ProductSizes ?? Enumerable.Empty<ProductSize>())
+                                        {
+                                            <option value="@size.SizeID">@size.Size.SizeName</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm color-select" data-id="@item.ProductID">
+                                        <option value="">Chọn màu</option>
+                                        @foreach (var color in item.ProductColors ?? Enumerable.Empty<ProductColor>())
+                                        {
+                                            <option value="@color.ColorID">@color.Color.ColorName</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm quantity-input" min="1" value="1" style="width: 80px;" data-id="@item.ProductID">
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-light btn-sm add-to-cart" data-id="@item.ProductID" title="Thêm vào giỏ hàng">
+                                            <i class="bi bi-cart-plus"></i>
+                                        </button>
+                                        <button class="btn btn-danger btn-sm remove-from-wishlist" data-id="@item.ProductID" title="Xóa khỏi yêu thích">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-heart fs-1 text-muted"></i>
+                <p class="text-muted mt-2">Danh sách yêu thích của bạn đang trống.</p>
+                <a asp-controller="Product" asp-action="Index" class="btn btn-light">Tiếp tục mua sắm</a>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .btn-light {
+        color: #333;
+        border-color: #ccc;
+    }
+
+        .btn-light:hover {
+            background-color: #e9ecef;
+        }
+
+    .btn-danger {
+        color: #fff;
+    }
+
+    .quantity-input {
+        display: inline-block;
+    }
+
+    .btn-group .btn {
+        padding: 6px 12px;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Thêm vào giỏ hàng từ wishlist
+            $('.add-to-cart').on('click', function () {
+                const productId = $(this).data('id');
+                const $row = $(this).closest('tr');
+                const sizeId = $row.find('.size-select').val();
+                const colorId = $row.find('.color-select').val();
+                const quantity = $row.find('.quantity-input').val();
+
+                if (!sizeId) {
+                    showToast('Vui lòng chọn kích thước!', false);
+                    return;
+                }
+                if (!colorId) {
+                    showToast('Vui lòng chọn màu sắc!', false);
+                    return;
+                }
+                if (quantity <= 0) {
+                    showToast('Số lượng phải lớn hơn 0!', false);
+                    return;
+                }
+
+                $.ajax({
+                    url: '@Url.Action("AddToCart", "Cart")',
+                    type: 'POST',
+                    data: {
+                        productId: productId,
+                        sizeId: sizeId,
+                        quantity: quantity,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            showToast('Đã thêm vào giỏ hàng thành công!', true); // Thông báo cố định
+                            if (response.cartCount !== undefined) {
+                                $('#cartCount').text(`Cart (${response.cartCount})`);
+                            }
+                            $(document).trigger('cart-updated');
+                        } else {
+                            showToast(response.message, false);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('Lỗi AJAX AddToCart:', xhr.status, xhr.responseText);
+                        showToast('Đã có lỗi xảy ra: ' + error, false);
+                    }
+                });
+            });
+
+            // Xóa khỏi wishlist
+            $('.remove-from-wishlist').on('click', function () {
+                const productId = $(this).data('id');
+                const $row = $(this).closest('tr');
+
+                $.ajax({
+                    url: '@Url.Action("ToggleWishlist", "Product")',
+                    type: 'POST',
+                    data: {
+                        productId: productId,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            $row.remove();
+                            showToast(response.message, true);
+                            $(document).trigger('wishlist-updated');
+                            if ($('.wishlist-item').length === 0) {
+                                window.location.reload();
+                            }
+                        } else {
+                            showToast(response.message, false);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        showToast('Đã có lỗi xảy ra: ' + error, false);
+                    }
+                });
+            });
+
+            // Hàm cập nhật số lượng giỏ hàng (dự phòng)
+            function updateCartCount() {
+                $.ajax({
+                    url: '@Url.Action("GetCartCount", "Cart")',
+                    type: 'GET',
+                    success: function (count) {
+                        $('#cartCount').text(`Cart (${count})`);
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('Lỗi AJAX GetCartCount:', xhr.status, xhr.responseText);
+                        $('#cartCount').text('Cart (0)');
+                    }
+                });
+            }
+        });
+    </script>
+}

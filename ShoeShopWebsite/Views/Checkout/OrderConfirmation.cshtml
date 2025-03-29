@@ -1,0 +1,96 @@
+﻿@model ShoeShopWebsite.Models.Order
+
+@{
+    ViewData["Title"] = "Hóa đơn - ShoeShopWebsite";
+}
+
+<div class="container mt-5">
+    <h2 class="mb-4">Hóa đơn thanh toán</h2>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h4 class="mb-0">Mã đơn hàng: #@Model.OrderID</h4>
+            <p class="mb-1">Ngày đặt hàng: @Model.OrderDate.ToString("dd/MM/yyyy HH:mm")</p>
+            <p class="mb-1">
+                Phương thức thanh toán:
+                @switch (Model.PaymentMethod)
+                {
+                    case "Cash":
+                        <span>Thanh toán tiền mặt khi nhận hàng</span>
+                        <small class="text-muted"> (Vui lòng chuẩn bị đủ tiền mặt)</small>
+                        break;
+                    case "MoMo":
+                        <span>Thanh toán qua MoMo</span>
+                        break;
+                    case "VNPay":
+                        <span>Thanh toán qua VNPay</span>
+                        break;
+                    default:
+                        <span>Không xác định</span>
+                        break;
+                }
+            </p>
+            <p class="mb-0">
+                Trạng thái:
+                @switch (Model.Status)
+                {
+                    case "Pending":
+                        <span class="badge bg-warning">Đang xử lý</span>
+                        break;
+                    case "Completed":
+                        <span class="badge bg-success">Hoàn tất</span>
+                        break;
+                    default:
+                        <span class="badge bg-danger">Thất bại</span>
+                        break;
+                }
+            </p>
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Hình ảnh</th>
+                        <th>Sản phẩm</th>
+                        <th>Kích thước</th>
+                        <th>Màu sắc</th>
+                        <th>Giá</th>
+                        <th>Số lượng</th>
+                        <th>Tổng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var detail in Model.OrderDetails)
+                    {
+                        <tr>
+                            <td>
+                                <img src="@(detail.Product.ProductImages?.FirstOrDefault()?.ImageURL ?? "/images/no-image.png")"
+                                     alt="@detail.Product.ProductName"
+                                     style="width: 50px; height: 50px; object-fit: cover;" />
+                            </td>
+                            <td>@detail.Product.ProductName</td>
+                            <td>@detail.Size.SizeName</td>
+                            <td>@(detail.Color?.ColorName ?? "Không có màu")</td>
+                            <td>@detail.Price.ToString("N0") đ</td>
+                            <td>@detail.Quantity</td>
+                            <td>@((detail.Price * detail.Quantity).ToString("N0")) đ</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="fw-bold">
+                        <td colspan="6" class="text-end">Tổng cộng:</td>
+                        <td>@Model.TotalPrice.ToString("N0") đ</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <div class="card-footer text-end">
+            <a href="@Url.Action("Index", "Home")" class="btn btn-primary">Quay về trang chủ</a>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.8.1/font/bootstrap-icons.min.css" integrity="sha512-vtjoW+alOHgYDVZgB2nQUtXHR8u3F4AYXzW4PokuEEnt5sXXeAoBOn4Kl0tkXDTb9OrtfzvX8kVEQEqMugQSDgQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+}

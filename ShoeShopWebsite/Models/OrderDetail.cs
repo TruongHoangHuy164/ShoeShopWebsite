@@ -17,10 +17,12 @@ public class OrderDetail
     [Required]
     public int SizeID { get; set; }
     public Size Size { get; set; }
+    public Color Color { get; set; } // Quan hệ với Color
 
     [Required]
     public int Quantity { get; set; }
 
     [Required]
     public decimal Price { get; set; }
+    public int? ColorID { get; set; }
 }
