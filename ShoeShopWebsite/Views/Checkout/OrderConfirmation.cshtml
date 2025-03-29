@@ -7,48 +7,47 @@
 <div class="container mt-5">
     <h2 class="mb-4">Hóa đơn thanh toán</h2>
 
-    <div class="card shadow-sm">
-        <div class="card-header bg-light">
-            <h4 class="mb-0">Mã đơn hàng: #@Model.OrderID</h4>
-            <p class="mb-1">Ngày đặt hàng: @Model.OrderDate.ToString("dd/MM/yyyy HH:mm")</p>
-            <p class="mb-1">
+    <div class="card">
+        <div class="card-header">
+            <h4>Mã đơn hàng: #@Model.OrderID</h4>
+            <p>Ngày đặt hàng: @Model.OrderDate.ToString("dd/MM/yyyy HH:mm")</p>
+            <p>
                 Phương thức thanh toán:
                 @switch (Model.PaymentMethod)
                 {
                     case "Cash":
-                        <span>Thanh toán tiền mặt khi nhận hàng</span>
-                        <small class="text-muted"> (Vui lòng chuẩn bị đủ tiền mặt)</small>
+                        @: Thanh toán tiền mặt khi nhận hàng
                         break;
                     case "MoMo":
-                        <span>Thanh toán qua MoMo</span>
+                        @: Thanh toán qua MoMo
                         break;
                     case "VNPay":
-                        <span>Thanh toán qua VNPay</span>
+                        @: Thanh toán qua VNPay
                         break;
                     default:
-                        <span>Không xác định</span>
+                        @: Không xác định
                         break;
                 }
             </p>
-            <p class="mb-0">
+            <p>
                 Trạng thái:
-                @switch (Model.Status)
+                @if (Model.Status == "Pending")
                 {
-                    case "Pending":
-                        <span class="badge bg-warning">Đang xử lý</span>
-                        break;
-                    case "Completed":
-                        <span class="badge bg-success">Hoàn tất</span>
-                        break;
-                    default:
-                        <span class="badge bg-danger">Thất bại</span>
-                        break;
+                    <span class="badge bg-warning">Đang xử lý</span>
+                }
+                else if (Model.Status == "Completed")
+                {
+                    <span class="badge bg-success">Hoàn tất</span>
+                }
+                else
+                {
+                    <span class="badge bg-danger">Thất bại</span>
                 }
             </p>
         </div>
         <div class="card-body">
-            <table class="table table-bordered table-striped table-hover">
-                <thead class="table-dark">
+            <table class="table table-bordered table-striped">
+                <thead>
                     <tr>
                         <th>Hình ảnh</th>
                         <th>Sản phẩm</th>
@@ -78,9 +77,9 @@
                     }
                 </tbody>
                 <tfoot>
-                    <tr class="fw-bold">
-                        <td colspan="6" class="text-end">Tổng cộng:</td>
-                        <td>@Model.TotalPrice.ToString("N0") đ</td>
+                    <tr>
+                        <td colspan="6" class="text-end"><strong>Tổng cộng:</strong></td>
+                        <td><strong>@Model.TotalPrice.ToString("N0") đ</strong></td>
                     </tr>
                 </tfoot>
             </table>
@@ -92,5 +91,5 @@
 </div>
 
 @section Scripts {
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.8.1/font/bootstrap-icons.min.css" integrity="sha512-vtjoW+alOHgYDVZgB2nQUtXHR8u3F4AYXzW4PokuEEnt5sXXeAoBOn4Kl0tkXDTb9OrtfzvX8kVEQEqMugQSDgQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.8.1/font/bootstrap-icons.min.css">
 }

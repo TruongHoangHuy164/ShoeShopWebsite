@@ -53,6 +53,7 @@
                 <div class="card p-4 shadow-sm">
                     <h4 class="mb-3">Chọn phương thức thanh toán</h4>
                     <form id="paymentForm">
+                        @Html.AntiForgeryToken() <!-- Thêm token chống giả mạo -->
                         <div class="mb-3">
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="radio" name="paymentMethod" id="momo" value="MoMo" required>
@@ -101,25 +102,31 @@
                     return;
                 }
 
+                console.log("Sending AJAX request with paymentMethod: " + paymentMethod); // Debug
+                console.log("CSRF Token: " + $('input[name="__RequestVerificationToken"]').val()); // Debug token
+
                 $.ajax({
                     url: '@Url.Action("ProcessPayment", "Checkout")',
                     type: 'POST',
                     data: { paymentMethod: paymentMethod },
-                    headers: { 'X-CSRF-TOKEN': $('input[name="__RequestVerificationToken"]').val() },
+                    headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+
                     success: function (response) {
+                        console.log("AJAX Success: ", response); // Debug
                         if (response.success) {
                             if (response.redirectUrl) {
-                                window.location.href = response.redirectUrl;
-                            }
-                            if (response.message) {
-                                $('#paymentMessage').html('<div class="alert alert-success">' + response.message + '</div>');
+                                console.log("Redirecting to: " + response.redirectUrl);
+                                window.location.href = response.redirectUrl; // Chuyển hướng sang trang hóa đơn
+                            } else {
+                                $('#paymentMessage').html('<div class="alert alert-success">' + (response.message || 'Thanh toán thành công!') + '</div>');
                             }
                         } else {
                             $('#paymentMessage').html('<div class="alert alert-danger">' + response.message + '</div>');
                         }
                     },
-                    error: function () {
-                        $('#paymentMessage').html('<div class="alert alert-danger">Có lỗi xảy ra khi xử lý thanh toán!</div>');
+                    error: function (xhr, status, error) {
+                        console.log("AJAX Error: ", xhr.responseText, status, error); // Debug
+                        $('#paymentMessage').html('<div class="alert alert-danger">Có lỗi xảy ra khi xử lý thanh toán: ' + (xhr.responseText || error) + '</div>');
                     }
                 });
             });
