@@ -5,7 +5,7 @@
         public string partnerCode { get; set; }
         public string accessKey { get; set; }
         public string requestId { get; set; }
-        public long amount { get; set; }
+        public string amount { get; set; } // Thay đổi từ long thành string
         public string orderId { get; set; }
         public string orderInfo { get; set; }
         public string redirectUrl { get; set; }

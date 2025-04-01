@@ -2,7 +2,10 @@
 using Microsoft.EntityFrameworkCore;
 using ShoeShopWebsite.Models;
 using ShoeShopWebsite.Services;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -12,11 +15,18 @@ namespace ShoeShopWebsite.Controllers
     {
         private readonly NikeShopDbContext _context;
         private readonly IMomoService _momoService;
+        private readonly IVNPayService _vnpayService;
+        private readonly IConfiguration _configuration;
+        private readonly HttpClient _httpClient;
 
-        public CheckoutController(NikeShopDbContext context, IMomoService momoService)
+        public CheckoutController(NikeShopDbContext context, IMomoService momoService, IVNPayService vnpayService, IConfiguration configuration, HttpClient httpClient)
         {
             _context = context;
             _momoService = momoService;
+            _vnpayService = vnpayService;
+            _configuration = configuration;
+            _httpClient = httpClient;
+            _httpClient.BaseAddress = new Uri("https://provinces.open-api.vn/api/");
         }
 
         private string GetSessionId()
@@ -26,19 +36,16 @@ namespace ShoeShopWebsite.Controllers
             {
                 sessionId = Guid.NewGuid().ToString();
                 HttpContext.Session.SetString("CartSessionId", sessionId);
-                Console.WriteLine($"Generated new SessionId: {sessionId}"); // Debug
             }
             return sessionId;
         }
 
-        // GET: Checkout/Index
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
             try
             {
                 var sessionId = GetSessionId();
-                Console.WriteLine($"Checkout Index - SessionId: {sessionId}"); // Debug
-
                 var cartItems = await _context.Carts
                     .Include(c => c.Product)
                         .ThenInclude(p => p.ProductImages)
@@ -51,40 +58,112 @@ namespace ShoeShopWebsite.Controllers
 
                 if (!cartItems.Any())
                 {
-                    TempData["ErrorMessage"] = "Giỏ hàng của bạn trống. Vui lòng thêm sản phẩm trước khi thanh toán.";
+                    TempData["ErrorMessage"] = "Giỏ hàng của bạn trống.";
                     return RedirectToAction("Index", "Cart");
                 }
 
-                foreach (var item in cartItems)
+                var model = new CheckoutViewModel { CartItems = cartItems };
+
+                var provincesResponse = await _httpClient.GetAsync("p");
+                if (!provincesResponse.IsSuccessStatusCode)
                 {
-                    var stock = item.Product.ProductSizes.FirstOrDefault(ps => ps.SizeID == item.SizeID)?.Stock ?? 0;
-                    if (item.Quantity > stock)
-                    {
-                        TempData["ErrorMessage"] = $"Sản phẩm {item.Product.ProductName} (Kích thước: {item.Size.SizeName}) chỉ còn {stock} sản phẩm trong kho.";
-                        return RedirectToAction("Index", "Cart");
-                    }
+                    TempData["ErrorMessage"] = $"Không thể tải danh sách tỉnh/thành phố. Mã lỗi: {provincesResponse.StatusCode}";
+                    return View(model);
                 }
 
-                return View(cartItems);
+                var provincesJson = await provincesResponse.Content.ReadAsStringAsync();
+                var provinces = JsonSerializer.Deserialize<List<Province>>(
+                    provincesJson,
+                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+                );
+
+                ViewBag.Provinces = provinces ?? new List<Province>();
+                return View(model);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in Index: {ex.Message}\nStackTrace: {ex.StackTrace}");
-                TempData["ErrorMessage"] = "Đã có lỗi xảy ra. Vui lòng thử lại sau.";
+                TempData["ErrorMessage"] = "Đã xảy ra lỗi khi tải trang thanh toán: " + ex.Message;
                 return RedirectToAction("Index", "Cart");
             }
         }
 
-        // POST: Checkout/ProcessPayment
+        [HttpGet]
+        public async Task<IActionResult> GetDistricts(int provinceId)
+        {
+            try
+            {
+                if (provinceId <= 0)
+                {
+                    return Json(new { success = false, message = "Vui lòng chọn tỉnh/thành phố hợp lệ." });
+                }
+
+                var response = await _httpClient.GetAsync($"p/{provinceId}?depth=2");
+                if (!response.IsSuccessStatusCode)
+                {
+                    return Json(new { success = false, message = $"Không thể tải danh sách quận/huyện. Mã lỗi: {response.StatusCode}" });
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                var province = JsonSerializer.Deserialize<Province>(
+                    json,
+                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+                );
+
+                if (province?.Districts == null || !province.Districts.Any())
+                {
+                    return Json(new { success = false, message = "Không có quận/huyện nào cho tỉnh/thành phố này." });
+                }
+
+                return Json(province.Districts.Select(d => new { code = d.Code, name = d.Name }));
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi khi tải quận/huyện: {ex.Message}" });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetWards(int districtId)
+        {
+            try
+            {
+                if (districtId <= 0)
+                {
+                    return Json(new { success = false, message = "Vui lòng chọn quận/huyện hợp lệ." });
+                }
+
+                var response = await _httpClient.GetAsync($"d/{districtId}?depth=2");
+                if (!response.IsSuccessStatusCode)
+                {
+                    return Json(new { success = false, message = $"Không thể tải danh sách phường/xã. Mã lỗi: {response.StatusCode}" });
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                var district = JsonSerializer.Deserialize<District>(
+                    json,
+                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+                );
+
+                if (district?.Wards == null || !district.Wards.Any())
+                {
+                    return Json(new { success = false, message = "Không có phường/xã nào cho quận/huyện này." });
+                }
+
+                return Json(district.Wards.Select(w => new { code = w.Code, name = w.Name }));
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi khi tải phường/xã: {ex.Message}" });
+            }
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ProcessPayment(string paymentMethod)
+        public async Task<IActionResult> ProcessPayment(CheckoutViewModel model)
         {
             try
             {
                 var sessionId = GetSessionId();
-                Console.WriteLine($"ProcessPayment - SessionId: {sessionId}, PaymentMethod: {paymentMethod}"); // Debug
-
                 var cartItems = await _context.Carts
                     .Include(c => c.Product)
                     .Include(c => c.Size)
@@ -96,24 +175,45 @@ namespace ShoeShopWebsite.Controllers
 
                 if (!cartItems.Any())
                 {
-                    return Json(new { success = false, message = "Giỏ hàng trống!" });
+                    return BadRequest(new { success = false, message = "Giỏ hàng trống!" });
                 }
 
-                foreach (var item in cartItems)
+                if (!ModelState.IsValid)
                 {
-                    var stock = item.Product.ProductSizes.FirstOrDefault(ps => ps.SizeID == item.SizeID)?.Stock ?? 0;
-                    if (item.Quantity > stock)
-                    {
-                        return Json(new { success = false, message = $"Sản phẩm {item.Product.ProductName} chỉ còn {stock} sản phẩm trong kho." });
-                    }
+                    var errors = ModelState.SelectMany(kvp => kvp.Value.Errors).Select(e => e.ErrorMessage);
+                    return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ: " + string.Join(", ", errors) });
                 }
 
+                if (model.ProvinceId <= 0 || model.DistrictId <= 0 || model.WardId <= 0)
+                {
+                    return BadRequest(new { success = false, message = "Vui lòng chọn đầy đủ tỉnh/thành phố, quận/huyện và phường/xã." });
+                }
+
+                var province = await GetProvinceName(model.ProvinceId);
+                var district = await GetDistrictName(model.DistrictId);
+                var ward = await GetWardName(model.WardId);
+
+                if (string.IsNullOrEmpty(province) || string.IsNullOrEmpty(district) || string.IsNullOrEmpty(ward))
+                {
+                    string errorMessage = "Không thể lấy thông tin địa chỉ. ";
+                    if (string.IsNullOrEmpty(province)) errorMessage += $"Tỉnh/thành phố không hợp lệ (ProvinceId: {model.ProvinceId}). ";
+                    if (string.IsNullOrEmpty(district)) errorMessage += $"Quận/huyện không hợp lệ (DistrictId: {model.DistrictId}). ";
+                    if (string.IsNullOrEmpty(ward)) errorMessage += $"Phường/xã không hợp lệ (WardId: {model.WardId}).";
+                    return BadRequest(new { success = false, message = errorMessage });
+                }
+
+                var fullAddress = $"{model.AddressDetail}, {ward}, {district}, {province}";
                 var order = new Order
                 {
+                    SessionId = sessionId,
+                    FullName = model.FullName,
+                    Address = fullAddress,
+                    PhoneNumber = model.PhoneNumber,
+                    Note = model.Note,
                     TotalPrice = cartItems.Sum(c => c.Product.Price * c.Quantity),
                     OrderDate = DateTime.Now,
                     Status = "Pending",
-                    PaymentMethod = paymentMethod,
+                    PaymentMethod = model.PaymentMethod,
                     OrderDetails = cartItems.Select(c => new OrderDetail
                     {
                         ProductID = c.ProductID,
@@ -126,157 +226,129 @@ namespace ShoeShopWebsite.Controllers
 
                 _context.Orders.Add(order);
                 await _context.SaveChangesAsync();
-                Console.WriteLine($"Order created with ID: {order.OrderID}"); // Debug
 
                 foreach (var item in cartItems)
                 {
-                    var productSize = item.Product.ProductSizes.First(ps => ps.SizeID == item.SizeID);
+                    var productSize = item.Product.ProductSizes.FirstOrDefault(ps => ps.SizeID == item.SizeID);
+                    if (productSize == null || productSize.Stock < item.Quantity)
+                    {
+                        return BadRequest(new { success = false, message = $"Sản phẩm {item.Product.ProductName} (Size: {item.Size.SizeName}) không đủ hàng." });
+                    }
                     productSize.Stock -= item.Quantity;
                 }
 
-                switch (paymentMethod)
+                await _context.SaveChangesAsync();
+
+                switch (model.PaymentMethod)
                 {
                     case "Cash":
                         order.Status = "Completed";
                         _context.Carts.RemoveRange(cartItems);
                         await _context.SaveChangesAsync();
-                        var redirectUrl = Url.Action("OrderConfirmation", new { orderId = order.OrderID });
-                        Console.WriteLine($"Redirect URL for Cash: {redirectUrl}"); // Debug
-                        return Json(new
-                        {
-                            success = true,
-                            redirectUrl = redirectUrl,
-                            message = "Đơn hàng đã được đặt thành công. Vui lòng chuẩn bị tiền mặt khi nhận hàng!"
-                        });
+                        return Ok(new { success = true, redirectUrl = Url.Action("OrderConfirmation", new { orderId = order.OrderID }), message = "Đặt hàng thành công (COD)!" });
 
                     case "MoMo":
                         var momoResponse = await _momoService.CreatePaymentAsync(order);
-                        if (momoResponse.resultCode == 0) // Thành công
+                        if (momoResponse?.resultCode == 0)
                         {
-                            return Json(new
-                            {
-                                success = true,
-                                redirectUrl = momoResponse.payUrl,
-                                message = "Chuyển hướng đến trang thanh toán MoMo!"
-                            });
+                            return Ok(new { success = true, redirectUrl = momoResponse.payUrl, message = "Chuyển hướng đến MoMo!" });
                         }
-                        else
-                        {
-                            return Json(new { success = false, message = $"Thanh toán MoMo thất bại: {momoResponse.message}" });
-                        }
+                        return BadRequest(new { success = false, message = "Thanh toán MoMo thất bại!" });
 
                     case "VNPay":
-                        return Json(new { success = false, message = "Phương thức VNPay chưa được triển khai!" });
+                        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+                        if (string.IsNullOrEmpty(ipAddress))
+                        {
+                            return BadRequest(new { success = false, message = "Không thể lấy địa chỉ IP để thanh toán VNPay." });
+                        }
+                        var vnpayUrl = _vnpayService.CreatePaymentUrl(order, ipAddress);
+                        return Ok(new { success = true, redirectUrl = vnpayUrl, message = "Chuyển hướng đến VNPay!" });
 
                     default:
-                        return Json(new { success = false, message = "Phương thức thanh toán không hợp lệ!" });
+                        return BadRequest(new { success = false, message = "Phương thức thanh toán không hợp lệ!" });
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in ProcessPayment: {ex.Message}\nStackTrace: {ex.StackTrace}");
-                return Json(new { success = false, message = $"Đã có lỗi xảy ra khi xử lý thanh toán: {ex.Message}" });
+                return StatusCode(500, new { success = false, message = $"Lỗi xử lý thanh toán: {ex.Message}" });
             }
         }
 
-        // GET: Checkout/PaymentCallback
-        [HttpGet]
-        public async Task<IActionResult> PaymentCallback()
+        private async Task<string> GetProvinceName(int provinceId)
         {
             try
             {
-                var response = _momoService.PaymentExecuteAsync(HttpContext.Request.Query);
-                var order = await _context.Orders
-                    .FirstOrDefaultAsync(o => o.OrderID == int.Parse(response.orderId));
+                if (provinceId <= 0) return string.Empty;
 
-                if (order == null)
+                var response = await _httpClient.GetAsync($"p/{provinceId}");
+                if (!response.IsSuccessStatusCode)
                 {
-                    return NotFound("Không tìm thấy đơn hàng!");
+                    return string.Empty;
                 }
 
-                if (response.resultCode == 0) // Thanh toán thành công
-                {
-                    order.Status = "Completed";
-                    var cartItems = await _context.Carts
-                        .Where(c => c.SessionId == GetSessionId())
-                        .ToListAsync();
-                    _context.Carts.RemoveRange(cartItems);
-                    await _context.SaveChangesAsync();
-                    return RedirectToAction("OrderConfirmation", new { orderId = order.OrderID });
-                }
-                else
-                {
-                    order.Status = "Failed";
-                    await _context.SaveChangesAsync();
-                    TempData["ErrorMessage"] = "Thanh toán MoMo thất bại: " + response.message;
-                    return RedirectToAction("Index");
-                }
+                var json = await response.Content.ReadAsStringAsync();
+                var province = JsonSerializer.Deserialize<Province>(
+                    json,
+                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+                );
+
+                return province?.Name ?? string.Empty;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"Error in PaymentCallback: {ex.Message}\nStackTrace: {ex.StackTrace}");
-                TempData["ErrorMessage"] = "Đã có lỗi xảy ra khi xử lý callback từ MoMo.";
-                return RedirectToAction("Index");
+                return string.Empty;
             }
         }
 
-        // POST: Checkout/Notify (IPN - MoMo gọi ngầm)
-        [HttpPost]
-        public async Task<IActionResult> Notify()
+        private async Task<string> GetDistrictName(int districtId)
         {
             try
             {
-                var response = _momoService.PaymentExecuteAsync(HttpContext.Request.Query);
-                var order = await _context.Orders
-                    .FirstOrDefaultAsync(o => o.OrderID == int.Parse(response.orderId));
+                if (districtId <= 0) return string.Empty;
 
-                if (order != null)
+                var response = await _httpClient.GetAsync($"d/{districtId}");
+                if (!response.IsSuccessStatusCode)
                 {
-                    if (response.resultCode == 0)
-                    {
-                        order.Status = "Completed";
-                    }
-                    else
-                    {
-                        order.Status = "Failed";
-                    }
-                    await _context.SaveChangesAsync();
+                    return string.Empty;
                 }
-                return Ok();
+
+                var json = await response.Content.ReadAsStringAsync();
+                var district = JsonSerializer.Deserialize<District>(
+                    json,
+                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+                );
+
+                return district?.Name ?? string.Empty;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"Error in Notify: {ex.Message}\nStackTrace: {ex.StackTrace}");
-                return StatusCode(500);
+                return string.Empty;
             }
         }
 
-        // GET: Checkout/OrderConfirmation
-        public async Task<IActionResult> OrderConfirmation(int orderId)
+        private async Task<string> GetWardName(int wardId)
         {
             try
             {
-                var order = await _context.Orders
-                    .Include(o => o.OrderDetails)
-                        .ThenInclude(od => od.Product)
-                            .ThenInclude(p => p.ProductImages)
-                    .Include(o => o.OrderDetails)
-                        .ThenInclude(od => od.Size)
-                    .Include(o => o.OrderDetails)
-                        .ThenInclude(od => od.Color)
-                    .FirstOrDefaultAsync(o => o.OrderID == orderId);
+                if (wardId <= 0) return string.Empty;
 
-                if (order == null)
+                var response = await _httpClient.GetAsync($"w/{wardId}");
+                if (!response.IsSuccessStatusCode)
                 {
-                    return NotFound("Không tìm thấy đơn hàng!");
+                    return string.Empty;
                 }
 
-                return View(order);
+                var json = await response.Content.ReadAsStringAsync();
+                var ward = JsonSerializer.Deserialize<Ward>(
+                    json,
+                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+                );
+
+                return ward?.Name ?? string.Empty;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"Error in OrderConfirmation: {ex.Message}\nStackTrace: {ex.StackTrace}");
-                return StatusCode(500, "Đã có lỗi xảy ra khi tải hóa đơn.");
+                return string.Empty;
             }
         }
     }

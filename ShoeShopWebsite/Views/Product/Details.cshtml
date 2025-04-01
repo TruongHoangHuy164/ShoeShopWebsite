@@ -211,53 +211,54 @@
             });
 
             // Thêm vào giỏ hàng qua AJAX
-            $('#addToCartForm').on('submit', function (e) {
-                e.preventDefault();
+                   $('#addToCartForm').on('submit', function (e) {
+            e.preventDefault();
 
-                var productId = $(this).find('input[name="productId"]').val();
-                var sizeId = $(this).find('select[name="sizeId"]').val();
-                var colorId = $(this).find('select[name="colorId"]').val();
-                var quantity = $(this).find('input[name="quantity"]').val();
+            var productId = $(this).find('input[name="productId"]').val();
+            var sizeId = $(this).find('select[name="sizeId"]').val();
+            var colorId = $(this).find('select[name="colorId"]').val();
+            var quantity = $(this).find('input[name="quantity"]').val();
 
-                if (!sizeId) {
-                    showToast('Vui lòng chọn kích cỡ!', false);
-                    return;
-                }
-                if (!colorId) {
-                    showToast('Vui lòng chọn màu sắc!', false);
-                    return;
-                }
-                if (quantity <= 0) {
-                    showToast('Số lượng phải lớn hơn 0!', false);
-                    return;
-                }
+            if (!sizeId) {
+                showToast('Vui lòng chọn kích cỡ!', false);
+                return;
+            }
+            if (!colorId) {
+                showToast('Vui lòng chọn màu sắc!', false);
+                return;
+            }
+            if (quantity <= 0) {
+                showToast('Số lượng phải lớn hơn 0!', false);
+                return;
+            }
 
-                console.log("Thêm vào giỏ hàng - ProductID:", productId, "SizeID:", sizeId, "ColorID:", colorId, "Quantity:", quantity);
+            console.log("Thêm vào giỏ hàng - ProductID:", productId, "SizeID:", sizeId, "ColorID:", colorId, "Quantity:", quantity);
 
-                $.ajax({
-                    url: '@Url.Action("AddToCart", "Cart")',
-                    type: 'POST',
-                    data: {
-                        productId: productId,
-                        sizeId: sizeId,
-                        quantity: quantity
-                    },
-                    success: function (response) {
-                        console.log("Phản hồi từ AddToCart:", response);
-                        if (response.success) {
-                            showToast(response.message, true);
-                            $('#cartCount').text(response.cartCount); // Cập nhật số lượng giỏ hàng trực tiếp
-                            $(document).trigger('cart-updated'); // Phát sự kiện để cập nhật trên các trang
-                        } else {
-                            showToast(response.message, false);
-                        }
-                    },
-                    error: function (xhr, status, error) {
-                        console.log("Lỗi AJAX AddToCart:", xhr.status, xhr.responseText);
-                        showToast('Đã có lỗi xảy ra: ' + error, false);
+            $.ajax({
+                url: '@Url.Action("AddToCart", "Cart")',
+                type: 'POST',
+                data: {
+                    productId: productId,
+                    sizeId: sizeId,
+                    colorId: colorId, // Đảm bảo gửi colorId
+                    quantity: quantity
+                },
+                success: function (response) {
+                    console.log("Phản hồi từ AddToCart:", response);
+                    if (response.success) {
+                        showToast(response.message, true);
+                        $('#cartCount').text(response.cartCount); // Cập nhật số lượng giỏ hàng trực tiếp
+                        $(document).trigger('cart-updated'); // Phát sự kiện để cập nhật trên các trang
+                    } else {
+                        showToast(response.message, false);
                     }
-                });
+                },
+                error: function (xhr, status, error) {
+                    console.log("Lỗi AJAX AddToCart:", xhr.status, xhr.responseText);
+                    showToast('Đã có lỗi xảy ra: ' + error, false);
+                }
             });
+        });
 
             // Hàm hiển thị toast thông báo
             function showToast(message, isSuccess) {

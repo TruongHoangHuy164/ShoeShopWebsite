@@ -247,39 +247,43 @@
                 }
             });
 
-            $('.add-to-cart').on('click', function () {
-                var productId = $(this).data('product-id');
-                var sizeId = $('#size-' + productId).val();
+                  $('.add-to-cart').on('click', function () {
+            var productId = $(this).data('product-id');
+            var sizeId = $('#size-' + productId).val();
 
-                if (!sizeId) {
-                    showToast('Vui lòng chọn kích thước trước khi thêm vào giỏ hàng!', false);
-                    return;
-                }
+            if (!sizeId) {
+                showToast('Vui lòng chọn kích thước trước khi thêm vào giỏ hàng!', false);
+                return;
+            }
 
-                showLoading();
+            showLoading();
 
-                $.ajax({
-                    url: '@Url.Action("AddToCart", "Cart")',
-                    type: 'POST',
-                    data: { productId: productId, sizeId: sizeId },
-                    success: function (response) {
-                        hideLoading();
-                        if (response.success) {
-                            showToast(response.message, true);
-                            $('#cartCount').text(`Cart (${response.cartCount})`); // Cập nhật trực tiếp
-                            $(document).trigger('cart-updated'); // Phát sự kiện
-                        } else {
-                            showToast(response.message, false);
-                        }
-                    },
-                    error: function (xhr, status, error) {
-                        hideLoading();
-                        showToast('Đã có lỗi xảy ra: ' + error, false);
-                        console.log('AJAX error:', xhr.responseText);
+            $.ajax({
+                url: '@Url.Action("AddToCart", "Cart")',
+                type: 'POST',
+                data: {
+                    productId: productId,
+                    sizeId: sizeId,
+                    colorId: null, // Thêm colorId mặc định là null
+                    quantity: 1
+                },
+                success: function (response) {
+                    hideLoading();
+                    if (response.success) {
+                        showToast(response.message, true);
+                        $('#cartCount').text(`Cart (${response.cartCount})`);
+                        $(document).trigger('cart-updated');
+                    } else {
+                        showToast(response.message, false);
                     }
-                });
+                },
+                error: function (xhr, status, error) {
+                    hideLoading();
+                    showToast('Đã có lỗi xảy ra: ' + error, false);
+                    console.log('AJAX error:', xhr.responseText);
+                }
             });
-
+        });
             function showLoading() {
                 if (!$('#loading-overlay').length) {
                     $('body').append(`

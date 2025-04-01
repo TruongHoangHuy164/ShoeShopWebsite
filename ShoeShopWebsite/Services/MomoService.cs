@@ -28,18 +28,20 @@ namespace ShoeShopWebsite.Services
             var redirectUrl = _configuration["MomoAPI:ReturnUrl"];
             var ipnUrl = _configuration["MomoAPI:NotifyUrl"];
             var requestType = _configuration["MomoAPI:RequestType"];
-            var amount = (long)order.TotalPrice;
+            var amount = ((long)order.TotalPrice).ToString(); // Đảm bảo là chuỗi số nguyên
 
-            // Tạo raw signature
             var rawData = $"accessKey={accessKey}&amount={amount}&extraData=&ipnUrl={ipnUrl}&orderId={orderId}&orderInfo={orderInfo}&partnerCode={partnerCode}&redirectUrl={redirectUrl}&requestId={requestId}&requestType={requestType}";
             var signature = ComputeHmacSha256(rawData, secretKey);
+
+            Console.WriteLine($"Raw Data: {rawData}");
+            Console.WriteLine($"Signature: {signature}");
 
             var request = new MomoRequest
             {
                 partnerCode = partnerCode,
                 accessKey = accessKey,
                 requestId = requestId,
-                amount = amount,
+                amount = amount, // Sử dụng chuỗi
                 orderId = orderId,
                 orderInfo = orderInfo,
                 redirectUrl = redirectUrl,
@@ -51,10 +53,19 @@ namespace ShoeShopWebsite.Services
 
             var client = _httpClientFactory.CreateClient();
             var json = JsonConvert.SerializeObject(request);
+            Console.WriteLine($"Request JSON: {json}");
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             var response = await client.PostAsync(_configuration["MomoAPI:MomoApiUrl"], content);
+
             var responseString = await response.Content.ReadAsStringAsync();
-            return JsonConvert.DeserializeObject<MomoResponse>(responseString);
+            Console.WriteLine($"MoMo Response: {responseString}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"MoMo payment failed: {responseString}");
+            }
+
+            return JsonConvert.DeserializeObject<MomoResponse>(responseString) ?? new MomoResponse();
         }
 
         public MomoCallback PaymentExecuteAsync(IQueryCollection query)

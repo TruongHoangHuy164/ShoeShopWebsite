@@ -90,6 +90,8 @@
         }
     </div>
 </div>
+    
+<div id="toastContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 1050;"></div>
 
 <style>
     .table-hover tbody tr:hover {
@@ -126,7 +128,7 @@
                 const productId = $(this).data('id');
                 const $row = $(this).closest('tr');
                 const sizeId = $row.find('.size-select').val();
-                const colorId = $row.find('.color-select').val();
+                const colorId = $row.find('.color-select').val(); // Lấy giá trị colorId
                 const quantity = $row.find('.quantity-input').val();
 
                 if (!sizeId) {
@@ -148,6 +150,7 @@
                     data: {
                         productId: productId,
                         sizeId: sizeId,
+                        colorId: colorId, // Thêm colorId vào data
                         quantity: quantity,
                         __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
                     },

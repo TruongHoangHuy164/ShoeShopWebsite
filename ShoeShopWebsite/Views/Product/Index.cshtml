@@ -219,42 +219,43 @@
             });
 
             // Thêm vào giỏ hàng (CartController)
-            $('.add-to-cart').on('click', function () {
-                const productId = $(this).data('id');
-                const $sizeSelect = $(this).siblings('.size-select');
-                const sizeId = $sizeSelect.val();
+                   $('.add-to-cart').on('click', function () {
+            const productId = $(this).data('id');
+            const $sizeSelect = $(this).siblings('.size-select');
+            const sizeId = $sizeSelect.val();
 
-                if (!sizeId) {
-                    showToast('Vui lòng chọn kích thước!', false);
-                    return;
-                }
+            if (!sizeId) {
+                showToast('Vui lòng chọn kích thước!', false);
+                return;
+            }
 
-                console.log("Thêm vào giỏ hàng - ProductID:", productId, "SizeID:", sizeId);
+            console.log("Thêm vào giỏ hàng - ProductID:", productId, "SizeID:", sizeId);
 
-                $.ajax({
-                    url: '@Url.Action("AddToCart", "Cart")',
-                    type: 'POST',
-                    data: {
-                        productId: productId,
-                        sizeId: sizeId,
-                        quantity: 1
-                    },
-                    success: function (response) {
-                        console.log("Phản hồi từ AddToCart:", response);
-                        if (response.success) {
-                            showToast(response.message, true);
-                            $('#cartCount').text(`Cart (${response.cartCount})`);
-                            $(document).trigger('cart-updated'); // Phát sự kiện để cập nhật nav
-                        } else {
-                            showToast(response.message, false);
-                        }
-                    },
-                    error: function (xhr, status, error) {
-                        console.log("Lỗi AJAX AddToCart:", xhr.status, xhr.responseText);
-                        showToast('Đã có lỗi xảy ra: ' + error, false);
+            $.ajax({
+                url: '@Url.Action("AddToCart", "Cart")',
+                type: 'POST',
+                data: {
+                    productId: productId,
+                    sizeId: sizeId,
+                    colorId: null, // Thêm colorId mặc định là null
+                    quantity: 1
+                },
+                success: function (response) {
+                    console.log("Phản hồi từ AddToCart:", response);
+                    if (response.success) {
+                        showToast(response.message, true);
+                        $('#cartCount').text(`Cart (${response.cartCount})`);
+                        $(document).trigger('cart-updated');
+                    } else {
+                        showToast(response.message, false);
                     }
-                });
+                },
+                error: function (xhr, status, error) {
+                    console.log("Lỗi AJAX AddToCart:", xhr.status, xhr.responseText);
+                    showToast('Đã có lỗi xảy ra: ' + error, false);
+                }
             });
+        });
 
             // Thêm vào danh sách yêu thích (ProductController)
             $('.add-to-wishlist').on('click', function () {

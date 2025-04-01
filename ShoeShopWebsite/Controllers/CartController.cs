@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ShoeShopWebsite.Models;
 using System;
@@ -10,34 +11,50 @@ namespace ShoeShopWebsite.Controllers
     public class CartController : Controller
     {
         private readonly NikeShopDbContext _context;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private const string SessionIdKey = "CartSessionId";
 
-        public CartController(NikeShopDbContext context)
+        public CartController(NikeShopDbContext context, IHttpContextAccessor httpContextAccessor)
         {
-            _context = context;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         }
 
         private string GetSessionId()
         {
-            var sessionId = HttpContext.Session.GetString(SessionIdKey);
+            if (_httpContextAccessor.HttpContext?.Session == null)
+            {
+                Console.WriteLine("Session is not available, generating temporary ID");
+                return Guid.NewGuid().ToString();
+            }
+
+            var sessionId = _httpContextAccessor.HttpContext.Session.GetString(SessionIdKey);
             if (string.IsNullOrEmpty(sessionId))
             {
                 sessionId = Guid.NewGuid().ToString();
-                HttpContext.Session.SetString(SessionIdKey, sessionId);
+                _httpContextAccessor.HttpContext.Session.SetString(SessionIdKey, sessionId);
                 Console.WriteLine($"Generated new SessionId: {sessionId}");
             }
             return sessionId;
         }
 
+        private string GetCartIdentifier()
+        {
+            var sessionId = GetSessionId();
+            Console.WriteLine($"CartIdentifier determined: {sessionId}");
+            return sessionId;
+        }
         [HttpPost]
-        public async Task<IActionResult> AddToCart(int productId, int sizeId, int? colorId, int quantity = 1)
+        public async Task<IActionResult> AddToCart(int productId, int sizeId, int? colorId = null, int quantity = 1)
         {
             try
             {
-                // Kiểm tra sản phẩm
+                Console.WriteLine($"AddToCart started - ProductID: {productId}, SizeID: {sizeId}, ColorID: {colorId}, Quantity: {quantity}");
+
                 var product = await _context.Products
                     .Include(p => p.ProductSizes)
                     .Include(p => p.ProductColors)
+                        .ThenInclude(pc => pc.Color)
                     .FirstOrDefaultAsync(p => p.ProductID == productId);
 
                 if (product == null)
@@ -45,35 +62,29 @@ namespace ShoeShopWebsite.Controllers
                     return Json(new { success = false, message = "Sản phẩm không tồn tại!" });
                 }
 
-                // Kiểm tra kích thước
-                var sizeExists = product.ProductSizes.Any(ps => ps.SizeID == sizeId);
-                if (!sizeExists)
+                if (product.ProductSizes == null || !product.ProductSizes.Any(ps => ps.SizeID == sizeId))
                 {
                     return Json(new { success = false, message = "Kích thước không hợp lệ!" });
                 }
 
-                // Kiểm tra màu sắc (nếu có)
-                if (colorId.HasValue)
+                if (colorId.HasValue && (product.ProductColors == null || !product.ProductColors.Any(pc => pc.ColorID == colorId.Value)))
                 {
-                    var colorExists = product.ProductColors.Any(pc => pc.ColorID == colorId.Value);
-                    if (!colorExists)
-                    {
-                        return Json(new { success = false, message = "Màu sắc không hợp lệ!" });
-                    }
+                    return Json(new { success = false, message = "Màu sắc không hợp lệ!" });
                 }
 
-                // Kiểm tra tồn kho
                 var stock = product.ProductSizes.First(ps => ps.SizeID == sizeId).Stock;
                 if (quantity > stock)
                 {
                     return Json(new { success = false, message = $"Số lượng vượt quá tồn kho! Chỉ còn {stock} sản phẩm." });
                 }
 
-                var sessionId = GetSessionId();
+                var cartIdentifier = GetCartIdentifier();
 
-                // Tìm hoặc tạo mới cart item
                 var cartItem = await _context.Carts
-                    .FirstOrDefaultAsync(c => c.ProductID == productId && c.SizeID == sizeId && c.ColorID == colorId && c.SessionId == sessionId);
+                    .FirstOrDefaultAsync(c => c.ProductID == productId &&
+                                             c.SizeID == sizeId &&
+                                             c.ColorID == colorId &&
+                                             c.SessionId == cartIdentifier);
 
                 if (cartItem == null)
                 {
@@ -81,9 +92,9 @@ namespace ShoeShopWebsite.Controllers
                     {
                         ProductID = productId,
                         SizeID = sizeId,
-                        ColorID = colorId,
+                        ColorID = colorId, // Mặc định là null nếu không gửi từ client
                         Quantity = quantity,
-                        SessionId = sessionId
+                        SessionId = cartIdentifier
                     };
                     _context.Carts.Add(cartItem);
                 }
@@ -98,16 +109,22 @@ namespace ShoeShopWebsite.Controllers
                 }
 
                 await _context.SaveChangesAsync();
+                Console.WriteLine("Database save successful");
 
                 var cartCount = await _context.Carts
-                    .Where(c => c.SessionId == sessionId)
+                    .Where(c => c.SessionId == cartIdentifier)
                     .SumAsync(c => c.Quantity);
 
                 return Json(new { success = true, message = "Sản phẩm đã được thêm vào giỏ hàng!", cartCount = cartCount });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in AddToCart: {ex.Message}\nStackTrace: {ex.StackTrace}");
+                Console.WriteLine($"Error in AddToCart: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+                }
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
                 return Json(new { success = false, message = "Đã có lỗi xảy ra. Vui lòng thử lại sau!" });
             }
         }
@@ -116,8 +133,8 @@ namespace ShoeShopWebsite.Controllers
         {
             try
             {
-                var sessionId = GetSessionId();
-                Console.WriteLine($"Index - SessionId: {sessionId}");
+                var cartIdentifier = GetCartIdentifier();
+                Console.WriteLine($"Index - CartIdentifier: {cartIdentifier}");
 
                 var cartItems = await _context.Carts
                     .Include(c => c.Product)
@@ -130,7 +147,7 @@ namespace ShoeShopWebsite.Controllers
                         .ThenInclude(pc => pc.Color)
                     .Include(c => c.Size)
                     .Include(c => c.Color)
-                    .Where(c => c.SessionId == sessionId)
+                    .Where(c => c.SessionId == cartIdentifier)
                     .ToListAsync();
 
                 Console.WriteLine($"Index - Number of cart items: {cartItems.Count}");
@@ -148,9 +165,9 @@ namespace ShoeShopWebsite.Controllers
         {
             try
             {
-                var sessionId = GetSessionId();
+                var cartIdentifier = GetCartIdentifier();
                 var cartItem = await _context.Carts
-                    .FirstOrDefaultAsync(c => c.CartID == cartId && c.SessionId == sessionId);
+                    .FirstOrDefaultAsync(c => c.CartID == cartId && c.SessionId == cartIdentifier);
 
                 if (cartItem == null)
                 {
@@ -161,7 +178,7 @@ namespace ShoeShopWebsite.Controllers
                 await _context.SaveChangesAsync();
 
                 var cartCount = await _context.Carts
-                    .Where(c => c.SessionId == sessionId)
+                    .Where(c => c.SessionId == cartIdentifier)
                     .SumAsync(c => c.Quantity);
 
                 return Json(new { success = true, message = "Sản phẩm đã được xóa khỏi giỏ hàng!", cartCount = cartCount });
@@ -178,15 +195,15 @@ namespace ShoeShopWebsite.Controllers
         {
             try
             {
-                var sessionId = GetSessionId();
-                Console.WriteLine($"UpdateCartItem - SessionId: {sessionId}, CartId: {cartId}, SizeId: {sizeId}, ColorId: {colorId}, Quantity: {quantity}");
+                var cartIdentifier = GetCartIdentifier();
+                Console.WriteLine($"UpdateCartItem - CartIdentifier: {cartIdentifier}, CartId: {cartId}, SizeId: {sizeId}, ColorId: {colorId}, Quantity: {quantity}");
 
                 var cartItem = await _context.Carts
                     .Include(c => c.Product)
                         .ThenInclude(p => p.ProductSizes)
                     .Include(c => c.Product)
                         .ThenInclude(p => p.ProductColors)
-                    .FirstOrDefaultAsync(c => c.CartID == cartId && c.SessionId == sessionId);
+                    .FirstOrDefaultAsync(c => c.CartID == cartId && c.SessionId == cartIdentifier);
 
                 if (cartItem == null)
                 {
@@ -196,7 +213,6 @@ namespace ShoeShopWebsite.Controllers
 
                 var product = cartItem.Product;
 
-                // Cập nhật kích thước
                 if (sizeId.HasValue)
                 {
                     var sizeExists = product.ProductSizes.Any(ps => ps.SizeID == sizeId.Value);
@@ -207,7 +223,6 @@ namespace ShoeShopWebsite.Controllers
                     cartItem.SizeID = sizeId.Value;
                 }
 
-                // Cập nhật màu sắc
                 if (colorId.HasValue)
                 {
                     var colorExists = product.ProductColors.Any(pc => pc.ColorID == colorId.Value);
@@ -222,7 +237,6 @@ namespace ShoeShopWebsite.Controllers
                     cartItem.ColorID = null;
                 }
 
-                // Cập nhật số lượng
                 if (quantity.HasValue)
                 {
                     if (quantity.Value <= 0)
@@ -243,7 +257,7 @@ namespace ShoeShopWebsite.Controllers
 
                 var subtotal = cartItem.Product.Price * cartItem.Quantity;
                 var cartCount = await _context.Carts
-                    .Where(c => c.SessionId == sessionId)
+                    .Where(c => c.SessionId == cartIdentifier)
                     .SumAsync(c => c.Quantity);
 
                 return Json(new
@@ -251,7 +265,7 @@ namespace ShoeShopWebsite.Controllers
                     success = true,
                     message = "Đã cập nhật giỏ hàng!",
                     quantity = cartItem.Quantity,
-                    subtotal = (double)subtotal, // Đảm bảo kiểu dữ liệu phù hợp
+                    subtotal = (double)subtotal,
                     cartCount = cartCount
                 });
             }
@@ -266,12 +280,11 @@ namespace ShoeShopWebsite.Controllers
         {
             try
             {
-                var sessionId = GetSessionId();
-                var cartItems = await _context.Carts
-                    .Where(c => c.SessionId == sessionId)
-                    .ToListAsync();
-
-                return cartItems.Sum(c => c.Quantity);
+                var cartIdentifier = GetCartIdentifier();
+                var cartCount = await _context.Carts
+                    .Where(c => c.SessionId == cartIdentifier)
+                    .SumAsync(c => c.Quantity);
+                return cartCount;
             }
             catch (Exception ex)
             {

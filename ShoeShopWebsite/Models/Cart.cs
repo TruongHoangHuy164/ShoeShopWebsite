@@ -10,7 +10,6 @@ namespace ShoeShopWebsite.Models
         public int? ColorID { get; set; } // Nullable để hỗ trợ trường hợp không chọn màu
         public int Quantity { get; set; }
         public string SessionId { get; set; }
-
         public Product Product { get; set; }
         public Size Size { get; set; }
         public Color Color { get; set; } // Quan hệ với Color
