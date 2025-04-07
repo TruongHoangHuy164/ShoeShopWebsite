@@ -1,0 +1,46 @@
+﻿@model ShoeShopWebsite.Models.User
+
+@{
+    ViewData["Title"] = "Chỉnh sửa người dùng";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container">
+    <h1>Chỉnh sửa người dùng</h1>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+
+    <form asp-controller="Admin" asp-action="EditUser" method="post">
+        <input type="hidden" asp-for="UserID" />
+        <div class="form-group">
+            <label asp-for="Username" class="control-label"></label>
+            <input asp-for="Username" class="form-control" />
+            <span asp-validation-for="Username" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="Email" class="control-label"></label>
+            <input asp-for="Email" class="form-control" />
+            <span asp-validation-for="Email" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label class="control-label">Mật khẩu mới (để trống nếu không đổi)</label>
+            <input type="password" name="password" class="form-control" />
+        </div>
+        <div class="form-group">
+            <label asp-for="RoleID" class="control-label"></label>
+            <select asp-for="RoleID" class="form-control" asp-items="ViewBag.Roles"></select>
+            <span asp-validation-for="RoleID" class="text-danger"></span>
+        </div>
+        <div class="form-group mt-3">
+            <input type="submit" value="Lưu" class="btn btn-primary" />
+            <a asp-action="UserList" asp-controller="Admin" class="btn btn-secondary">Quay lại</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

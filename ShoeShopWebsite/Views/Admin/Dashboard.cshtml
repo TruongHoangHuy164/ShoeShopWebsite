@@ -1,0 +1,148 @@
+﻿@model dynamic
+
+@{
+    ViewData["Title"] = "Admin Dashboard";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!-- Bootstrap 5 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+
+<div class="container-fluid py-4" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh;">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="text-center text-dark fw-bold">Admin Dashboard</h1>
+            <p class="text-center text-muted">Tổng quan về hệ thống ShoeShop</p>
+        </div>
+    </div>
+
+    <!-- Thông báo -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Thống kê chính -->
+    <div class="row g-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body text-center" style="background: linear-gradient(45deg, #00c6ff, #0072ff); color: white;">
+                    <i class="bi bi-people-fill" style="font-size: 2rem;"></i>
+                    <h5 class="card-title mt-2">Tổng người dùng</h5>
+                    <p class="card-text fs-2 fw-bold">@(Model?.TotalUsers ?? 0)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body text-center" style="background: linear-gradient(45deg, #ff7e5f, #feb47b); color: white;">
+                    <i class="bi bi-box-seam" style="font-size: 2rem;"></i>
+                    <h5 class="card-title mt-2">Tổng sản phẩm</h5>
+                    <p class="card-text fs-2 fw-bold">@(Model?.TotalProducts ?? 0)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body text-center" style="background: linear-gradient(45deg, #28c76f, #81fbb8); color: white;">
+                    <i class="bi bi-cart-check" style="font-size: 2rem;"></i>
+                    <h5 class="card-title mt-2">Tổng đơn hàng</h5>
+                    <p class="card-text fs-2 fw-bold">@(Model?.TotalOrders ?? 0)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body text-center" style="background: linear-gradient(45deg, #ffafbd, #ffc3a0); color: white;">
+                    <i class="bi bi-currency-exchange" style="font-size: 2rem;"></i>
+                    <h5 class="card-title mt-2">Doanh thu</h5>
+                    <p class="card-text fs-2 fw-bold">@(Model?.TotalRevenue != null ? Model.TotalRevenue.ToString("N0") : "0") VNĐ</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nút điều hướng -->
+    <div class="row mt-5 justify-content-center">
+        <div class="col-md-6 text-center">
+            <a asp-action="UserList" asp-controller="Admin" class="btn btn-outline-dark btn-lg mx-2">Quản lý người dùng</a>
+            <a asp-action="ProductList" asp-controller="Admin" class="btn btn-outline-dark btn-lg mx-2">Quản lý sản phẩm</a>
+            <a asp-action="CategoryList" asp-controller="Admin" class="btn btn-outline-dark btn-lg mx-2">Quản lý danh mục</a>
+        </div>
+    </div>
+
+    <!-- Placeholder cho biểu đồ (tùy chọn) -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h5 class="card-title">Thống kê doanh thu (Placeholder)</h5>
+                    <canvas id="revenueChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+<!-- Bootstrap 5 JS và Chart.js (tùy chọn cho biểu đồ) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+<style>
+    .card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+    .btn-outline-dark {
+        border-width: 2px;
+        font-weight: 500;
+    }
+
+        .btn-outline-dark:hover {
+            background-color: #343a40;
+            color: white;
+        }
+</style>
+
+<script>
+    // Tùy chọn: Khởi tạo biểu đồ doanh thu (placeholder)
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    const revenueChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5'],
+            datasets: [{
+                label: 'Doanh thu (VNĐ)',
+                data: [12000000, 19000000, 3000000, 5000000, 2000000],
+                borderColor: '#0072ff',
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
