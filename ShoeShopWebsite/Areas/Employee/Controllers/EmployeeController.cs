@@ -20,8 +20,8 @@ namespace ShoeShopWebsite.Controllers
 
         public EmployeeController(NikeShopDbContext context, IWebHostEnvironment hostEnvironment)
         {
-            _context = context;
-            _hostEnvironment = hostEnvironment;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _hostEnvironment = hostEnvironment ?? throw new ArgumentNullException(nameof(hostEnvironment));
         }
 
         // GET: /Employee/Dashboard
@@ -77,8 +77,7 @@ namespace ShoeShopWebsite.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Lỗi khi lấy dữ liệu dashboard: {ex.Message}");
-                return Json(new { success = false, message = "Đã xảy ra lỗi khi tải dữ liệu!" });
+                return Json(new { success = false, message = $"Lỗi khi tải dữ liệu dashboard: {ex.Message}" });
             }
         }
 
@@ -161,7 +160,7 @@ namespace ShoeShopWebsite.Controllers
             }
             catch (Exception ex)
             {
-                ModelState.AddModelError("", $"Có lỗi xảy ra: {ex.Message}");
+                TempData["ErrorMessage"] = $"Lỗi khi thêm sản phẩm: {ex.Message}";
                 LoadViewData(product);
                 return View("~/Views/Employee/CreateProduct.cshtml", product);
             }
@@ -213,7 +212,11 @@ namespace ShoeShopWebsite.Controllers
                     .Include(p => p.ProductColors)
                     .FirstOrDefaultAsync(p => p.ProductID == id);
 
-                if (productToUpdate == null) return NotFound();
+                if (productToUpdate == null)
+                {
+                    TempData["ErrorMessage"] = "Không tìm thấy sản phẩm để cập nhật.";
+                    return RedirectToAction(nameof(ProductList));
+                }
 
                 UpdateProduct(productToUpdate, product);
                 await _context.SaveChangesAsync();
@@ -227,7 +230,7 @@ namespace ShoeShopWebsite.Controllers
             }
             catch (Exception ex)
             {
-                ModelState.AddModelError("", $"Có lỗi xảy ra: {ex.Message}");
+                TempData["ErrorMessage"] = $"Lỗi khi cập nhật sản phẩm: {ex.Message}";
                 LoadViewData(product);
                 await LoadExistingData(id);
                 return View("~/Views/Employee/EditProduct.cshtml", product);
@@ -266,7 +269,11 @@ namespace ShoeShopWebsite.Controllers
                     .Include(p => p.ProductColors)
                     .FirstOrDefaultAsync(p => p.ProductID == id);
 
-                if (product == null) return NotFound();
+                if (product == null)
+                {
+                    TempData["ErrorMessage"] = "Không tìm thấy sản phẩm để xóa.";
+                    return RedirectToAction(nameof(ProductList));
+                }
 
                 _context.Products.Remove(product);
                 await _context.SaveChangesAsync();
@@ -276,7 +283,7 @@ namespace ShoeShopWebsite.Controllers
             }
             catch (Exception ex)
             {
-                TempData["ErrorMessage"] = $"Có lỗi xảy ra: {ex.Message}";
+                TempData["ErrorMessage"] = $"Lỗi khi xóa sản phẩm: {ex.Message}";
                 return RedirectToAction(nameof(ProductList));
             }
         }
@@ -326,7 +333,11 @@ namespace ShoeShopWebsite.Controllers
             if (id != orderUpdate.OrderID) return NotFound();
 
             var order = await _context.Orders.FirstOrDefaultAsync(o => o.OrderID == id);
-            if (order == null) return NotFound();
+            if (order == null)
+            {
+                TempData["ErrorMessage"] = "Không tìm thấy đơn hàng.";
+                return RedirectToAction(nameof(Dashboard));
+            }
 
             try
             {
@@ -335,11 +346,11 @@ namespace ShoeShopWebsite.Controllers
                 await _context.SaveChangesAsync();
 
                 TempData["SuccessMessage"] = "Cập nhật trạng thái đơn hàng thành công!";
-                return RedirectToAction(nameof(OrderDetails), new { id = order.OrderID });
+                return RedirectToAction(nameof(OrderDetails), new { id });
             }
             catch (Exception ex)
             {
-                ModelState.AddModelError("", "Đã xảy ra lỗi khi cập nhật trạng thái.");
+                TempData["ErrorMessage"] = $"Lỗi khi cập nhật trạng thái đơn hàng: {ex.Message}";
                 ViewBag.Statuses = new[] { "Pending", "Confirmed", "Delivering", "Completed" };
                 return View("~/Views/Employee/UpdateOrderStatus.cshtml", order);
             }
@@ -365,7 +376,7 @@ namespace ShoeShopWebsite.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = $"Đã xảy ra lỗi: {ex.Message}" });
+                return Json(new { success = false, message = $"Lỗi: {ex.Message}" });
             }
         }
 
@@ -389,7 +400,7 @@ namespace ShoeShopWebsite.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = $"Đã xảy ra lỗi: {ex.Message}" });
+                return Json(new { success = false, message = $"Lỗi: {ex.Message}" });
             }
         }
 
@@ -429,62 +440,59 @@ namespace ShoeShopWebsite.Controllers
 
         private async Task SaveProductSizes(int productId, List<int> selectedSizes, List<int> stockQuantities)
         {
-            if (selectedSizes != null && stockQuantities != null && selectedSizes.Count == stockQuantities.Count)
-            {
-                var productSizes = selectedSizes.Select((sizeId, i) => new ProductSize
-                {
-                    ProductID = productId,
-                    SizeID = sizeId,
-                    Stock = stockQuantities[i] > 0 ? stockQuantities[i] : 0
-                }).Where(ps => ps.Stock > 0).ToList();
+            if (selectedSizes?.Count != stockQuantities?.Count) return;
 
-                _context.ProductSizes.AddRange(productSizes);
-                await _context.SaveChangesAsync();
-            }
+            var productSizes = selectedSizes.Select((sizeId, i) => new ProductSize
+            {
+                ProductID = productId,
+                SizeID = sizeId,
+                Stock = stockQuantities[i] > 0 ? stockQuantities[i] : 0
+            }).Where(ps => ps.Stock > 0).ToList();
+
+            _context.ProductSizes.AddRange(productSizes);
+            await _context.SaveChangesAsync();
         }
 
         private async Task SaveProductColors(int productId, List<int> selectedColors)
         {
-            if (selectedColors != null && selectedColors.Any())
-            {
-                var productColors = selectedColors.Select(colorId => new ProductColor
-                {
-                    ProductID = productId,
-                    ColorID = colorId
-                }).ToList();
+            if (selectedColors == null || !selectedColors.Any()) return;
 
-                _context.ProductColors.AddRange(productColors);
-                await _context.SaveChangesAsync();
-            }
+            var productColors = selectedColors.Select(colorId => new ProductColor
+            {
+                ProductID = productId,
+                ColorID = colorId
+            }).ToList();
+
+            _context.ProductColors.AddRange(productColors);
+            await _context.SaveChangesAsync();
         }
 
         private async Task SaveProductImages(int productId, List<IFormFile> imageFiles)
         {
-            if (imageFiles != null && imageFiles.Any())
+            if (imageFiles == null || !imageFiles.Any()) return;
+
+            string uploadPath = Path.Combine(_hostEnvironment.WebRootPath, "images", "products");
+            Directory.CreateDirectory(uploadPath);
+
+            var productImages = new List<ProductImage>();
+            foreach (var imageFile in imageFiles.Where(f => f != null && f.Length > 0))
             {
-                string uploadPath = Path.Combine(_hostEnvironment.WebRootPath, "images", "products");
-                Directory.CreateDirectory(uploadPath);
-
-                var productImages = new List<ProductImage>();
-                foreach (var imageFile in imageFiles.Where(f => f != null && f.Length > 0))
+                string fileName = Guid.NewGuid() + Path.GetExtension(imageFile.FileName);
+                string filePath = Path.Combine(uploadPath, fileName);
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
                 {
-                    string fileName = Guid.NewGuid() + Path.GetExtension(imageFile.FileName);
-                    string filePath = Path.Combine(uploadPath, fileName);
-                    using (var fileStream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await imageFile.CopyToAsync(fileStream);
-                    }
-                    productImages.Add(new ProductImage
-                    {
-                        ProductID = productId,
-                        ImageURL = "/images/products/" + fileName,
-                        IsPrimary = productImages.Count == 0
-                    });
+                    await imageFile.CopyToAsync(fileStream);
                 }
-
-                _context.ProductImages.AddRange(productImages);
-                await _context.SaveChangesAsync();
+                productImages.Add(new ProductImage
+                {
+                    ProductID = productId,
+                    ImageURL = "/images/products/" + fileName,
+                    IsPrimary = productImages.Count == 0
+                });
             }
+
+            _context.ProductImages.AddRange(productImages);
+            await _context.SaveChangesAsync();
         }
 
         private void UpdateProduct(Product productToUpdate, Product product)
@@ -515,7 +523,7 @@ namespace ShoeShopWebsite.Controllers
 
         private async Task UpdateProductImages(int productId, List<IFormFile> imageFiles, List<int> deletedImageIds, int? primaryImageId)
         {
-            if (deletedImageIds != null && deletedImageIds.Any())
+            if (deletedImageIds?.Any() == true)
             {
                 var imagesToDelete = await _context.ProductImages
                     .Where(pi => pi.ProductID == productId && deletedImageIds.Contains(pi.ImageID))
@@ -531,7 +539,7 @@ namespace ShoeShopWebsite.Controllers
                 var images = await _context.ProductImages.Where(pi => pi.ProductID == productId).ToListAsync();
                 foreach (var image in images)
                 {
-                    image.IsPrimary = (image.ImageID == primaryImageId);
+                    image.IsPrimary = image.ImageID == primaryImageId;
                 }
                 await _context.SaveChangesAsync();
             }
