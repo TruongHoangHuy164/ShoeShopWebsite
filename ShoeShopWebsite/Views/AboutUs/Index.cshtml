@@ -1,0 +1,128 @@
+﻿@{
+    ViewData["Title"] = "Về chúng tôi";
+}
+
+<div class="container py-5">
+    <!-- Tiêu đề trang -->
+    <div class="text-center mb-5">
+        <h1 class="display-4 fw-bold">Về chúng tôi</h1>
+        <p class="lead text-muted">
+            Gặp gỡ đội ngũ đằng sau ShoeShop - những người đam mê giày thể thao, lấy cảm hứng từ Nike để mang đến phong cách và chất lượng tuyệt vời.
+        </p>
+    </div>
+
+    <!-- Danh sách thành viên -->
+    <div class="row justify-content-center">
+        <!-- Thành viên 1 -->
+        <div class="col-md-4 col-lg-3 mb-4">
+            <div class="team-member text-center">
+                <img src="~/images/team/member1.jpg" alt="Thành viên 1" class="rounded-circle mb-3 team-img">
+                <h5 class="fw-bold">Nông Vay Hội</h5>
+                <p class="text-muted small">MSSV: 2280601082 </p>
+                <p class="small">
+                    FullStack Developer
+                </p>
+            </div>
+        </div>
+
+        <!-- Thành viên 2 -->
+        <div class="col-md-4 col-lg-3 mb-4">
+            <div class="team-member text-center">
+                <img src="~/images/team/member2.jpg" alt="Thành viên 2" class="rounded-circle mb-3 team-img">
+                <h5 class="fw-bold">Trương Hoàng Huy</h5>
+                <p class="text-muted small">MSSV: 2280601274</p>
+                <p class="small">
+                    FullStack Developer
+                </p>
+            </div>
+        </div>
+
+        <!-- Thành viên 3 -->
+        <div class="col-md-4 col-lg-3 mb-4">
+            <div class="team-member text-center">
+                <img src="~/images/team/member3.jpg" alt="Thành viên 3" class="rounded-circle mb-3 team-img">
+                <h5 class="fw-bold">Đặng Lê Hoàng</h5>
+                <p class="text-muted small">MSSV: 2280601022</p>
+                <p class="small">
+                    BackEnd Developer
+                </p>
+            </div>
+        </div>
+
+        <!-- Thành viên 4 -->
+        <div class="col-md-4 col-lg-3 mb-4">
+            <div class="team-member text-center">
+                <img src="~/images/team/member4.jpg" alt="Thành viên 4" class="rounded-circle mb-3 team-img">
+                <h5 class="fw-bold">Võ Ngọc Hương</h5>
+                <p class="text-muted small">MSSV: 2280601343</p>
+                <p class="small">
+                   FontEnd Developer
+                </p>
+            </div>
+        </div>
+
+        <!-- Thành viên 5 -->
+        <div class="col-md-4 col-lg-3 mb-4">
+            <div class="team-member text-center">
+                <img src="~/images/team/member5.jpg" alt="Thành viên 5" class="rounded-circle mb-3 team-img">
+                <h5 class="fw-bold">Trương Minh Mẫn</h5>
+                <p class="text-muted small">MSSV: 2280601082</p>
+                <p class="small">
+                    Data Analyst 
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        /* Team Member Styles */
+        .team-member {
+            background: #fff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+            .team-member:hover {
+                transform: translateY(-10px);
+                box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            }
+
+        .team-img {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border: 3px solid #FFBD71;
+            transition: transform 0.3s ease;
+        }
+
+        .team-member:hover .team-img {
+            transform: scale(1.05);
+        }
+
+        .team-member h5 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .team-member p.text-muted {
+            color: #666 !important;
+            font-size: 0.9rem;
+        }
+
+        .team-member p.small {
+            color: #777;
+        }
+
+        /* Responsive */
+        @@media (max-width: 768px) {
+            .team-member {
+                margin: 0 auto;
+                max-width: 300px;
+            }
+        }
+    </style>
+}

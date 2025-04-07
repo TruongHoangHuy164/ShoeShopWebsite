@@ -39,6 +39,13 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddDefaultUI()
     .AddEntityFrameworkStores<NikeShopDbContext>();
 
+
+//builder.Services.AddAuthorization(options =>
+//{
+//    options.AddPolicy("AdminOnly", policy => policy.RequireRole(SD.Role_Admin));
+//    options.AddPolicy("EmployeeOnly", policy => policy.RequireRole(SD.Role_Employee));
+//    options.AddPolicy("CustomerOnly", policy => policy.RequireRole(SD.Role_Customer));
+//});
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Identity/Account/Login";
@@ -78,10 +85,13 @@ app.UseCookiePolicy();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllerRoute(
-    name: "areas",
-    pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}"
-);
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllerRoute(
+      name: "areas",
+      pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}"
+    );
+});
 // Cấu hình route
 app.MapControllerRoute(
     name: "default",

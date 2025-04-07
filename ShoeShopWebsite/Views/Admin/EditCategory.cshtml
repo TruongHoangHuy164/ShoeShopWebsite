@@ -5,24 +5,29 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container">
-    <h1>Chỉnh sửa danh mục</h1>
+<div class="container py-4">
+    <h1 class="text-center mb-4">Chỉnh sửa danh mục</h1>
 
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
-    }
-
-    <form asp-controller="Admin" asp-action="EditCategory" method="post">
-        <input type="hidden" asp-for="CategoryID" />
-        <div class="form-group">
-            <label asp-for="CategoryName" class="control-label"></label>
-            <input asp-for="CategoryName" class="form-control" />
-            <span asp-validation-for="CategoryName" class="text-danger"></span>
-        </div>
-        <div class="form-group mt-3">
-            <input type="submit" value="Lưu" class="btn btn-primary" />
-            <a asp-action="CategoryList" asp-controller="Admin" class="btn btn-secondary">Quay lại</a>
+    <form asp-action="EditCategory" asp-route-id="@Model.CategoryID" method="post">
+        @Html.AntiForgeryToken()
+        <div class="row">
+            <div class="col-md-6 mx-auto">
+                <input asp-for="CategoryID" type="hidden" /> <!-- Thêm dòng này -->
+                <div class="form-group mb-3">
+                    <label asp-for="CategoryName" class="form-label">Tên danh mục</label>
+                    <input asp-for="CategoryName" class="form-control" />
+                    <span asp-validation-for="CategoryName" class="text-danger"></span>
+                </div>
+                <div class="form-group mb-3">
+                    <label asp-for="Description" class="form-label">Mô tả</label>
+                    <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary">Cập nhật</button>
+                    <a asp-action="CategoryList" class="btn btn-secondary">Quay lại</a>
+                </div>
+            </div>
         </div>
     </form>
 </div>

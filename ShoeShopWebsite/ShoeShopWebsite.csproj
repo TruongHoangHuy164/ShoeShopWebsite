@@ -7,27 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Areas\Admin\**" />
-    <Content Remove="Areas\Admin\**" />
-    <EmbeddedResource Remove="Areas\Admin\**" />
-    <None Remove="Areas\Admin\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Remove="Views\Admin\CategoryList.cshtml" />
-    <Content Remove="Views\Admin\CreateCategory.cshtml" />
-    <Content Remove="Views\Admin\CreateUser.cshtml" />
-    <Content Remove="Views\Admin\Dashboard.cshtml" />
-    <Content Remove="Views\Admin\EditCategory.cshtml" />
-    <Content Remove="Views\Admin\EditUser.cshtml" />
-    <Content Remove="Views\Admin\UserLis.cshtml" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="Areas\Admin\Controllers\AdminController.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="9.0.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.3" />
@@ -52,16 +31,6 @@
     <Folder Include="Areas\Employee\Data\" />
     <Folder Include="Areas\Employee\Models\" />
     <Folder Include="Areas\Employee\Views\Employee\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="Views\Admin\CategoryList.cshtml" />
-    <None Include="Views\Admin\CreateCategory.cshtml" />
-    <None Include="Views\Admin\CreateUser.cshtml" />
-    <None Include="Views\Admin\Dashboard.cshtml" />
-    <None Include="Views\Admin\EditCategory.cshtml" />
-    <None Include="Views\Admin\EditUser.cshtml" />
-    <None Include="Views\Admin\UserLis.cshtml" />
   </ItemGroup>
 
 </Project>

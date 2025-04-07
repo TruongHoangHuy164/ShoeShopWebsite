@@ -22,7 +22,7 @@ namespace ShoeShopWebsite.Controllers
         }
 
         // GET: Product/Index
-        public async Task<IActionResult> Index(string searchName, string filterColor, string filterSize, string filterCategory)
+        public async Task<IActionResult> Index(string searchName, string sortPrice, string filterCategory)
         {
             var productsQuery = _context.Products
                 .Include(p => p.Category)
@@ -31,39 +31,44 @@ namespace ShoeShopWebsite.Controllers
                 .Include(p => p.ProductSizes).ThenInclude(ps => ps.Size)
                 .AsQueryable();
 
+            // Tìm kiếm theo tên
             if (!string.IsNullOrEmpty(searchName))
             {
                 productsQuery = productsQuery.Where(p => p.ProductName.ToLower().Contains(searchName.ToLower()));
             }
 
-            if (!string.IsNullOrEmpty(filterColor))
-            {
-                productsQuery = productsQuery.Where(p => p.ProductColors.Any(pc => pc.Color.ColorName == filterColor));
-            }
-
-            if (!string.IsNullOrEmpty(filterSize))
-            {
-                productsQuery = productsQuery.Where(p => p.ProductSizes.Any(ps => ps.Size.SizeName == filterSize));
-            }
-
+            // Lọc theo danh mục
             if (!string.IsNullOrEmpty(filterCategory))
             {
                 productsQuery = productsQuery.Where(p => p.Category.CategoryName == filterCategory);
             }
 
+            // Sắp xếp theo giá
+            switch (sortPrice)
+            {
+                case "low-to-high":
+                    productsQuery = productsQuery.OrderBy(p => p.Price);
+                    break;
+                case "high-to-low":
+                    productsQuery = productsQuery.OrderByDescending(p => p.Price);
+                    break;
+                default:
+                    productsQuery = productsQuery.OrderBy(p => p.ProductID); // Mặc định sắp xếp theo ProductID
+                    break;
+            }
+
             var products = await productsQuery.Take(8).ToListAsync();
 
-            ViewData["Colors"] = await _context.Colors.ToListAsync();
-            ViewData["Sizes"] = await _context.Sizes.ToListAsync();
-            ViewData["Categories"] = await _context.Categories.ToListAsync();
+            // Lưu dữ liệu để hiển thị lại trong view
             ViewData["SearchName"] = searchName;
-            ViewData["FilterColor"] = filterColor;
-            ViewData["FilterSize"] = filterSize;
+            ViewData["SortPrice"] = sortPrice;
             ViewData["FilterCategory"] = filterCategory;
+            ViewData["Categories"] = await _context.Categories.ToListAsync();
 
             return View(products);
         }
 
+        // Các action khác giữ nguyên
         // GET: Product/Details/5
         public async Task<IActionResult> Details(int? id)
         {
@@ -87,7 +92,7 @@ namespace ShoeShopWebsite.Controllers
         // GET: Product/Wishlist
         public async Task<IActionResult> Wishlist()
         {
-            var userId = User.Identity.Name ?? "Guest"; // Lấy UserID hoặc "Guest" nếu chưa đăng nhập
+            var userId = User.Identity.Name ?? "Guest";
             var wishlistItems = await _context.Wishlist
                 .Where(w => w.UserID == userId)
                 .Include(w => w.Product)

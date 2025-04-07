@@ -1,0 +1,129 @@
+﻿@model ShoeShopWebsite.Models.Product
+
+@{
+    ViewData["Title"] = "Chỉnh sửa sản phẩm";
+}
+
+<div class="container">
+    <h1>Chỉnh sửa sản phẩm</h1>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+
+    <form asp-controller="Admin" asp-action="EditProduct" enctype="multipart/form-data" method="post">
+        <input type="hidden" asp-for="ProductID" />
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label asp-for="ProductName" class="control-label"></label>
+                    <input asp-for="ProductName" class="form-control" />
+                    <span asp-validation-for="ProductName" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label asp-for="Price" class="control-label"></label>
+                    <input asp-for="Price" class="form-control" type="number" step="0.01" />
+                    <span asp-validation-for="Price" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label asp-for="Description" class="control-label"></label>
+                    <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label asp-for="CategoryID" class="control-label"></label>
+                    <select asp-for="CategoryID" class="form-control" asp-items="ViewBag.CategoryID"></select>
+                    <span asp-validation-for="CategoryID" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <!-- Kích cỡ -->
+                <div class="form-group mb-3">
+                    <label>Kích cỡ</label>
+                    <div class="row">
+                        @foreach (var size in (List<ShoeShopWebsite.Models.Size>)ViewBag.Sizes)
+                        {
+                            var isChecked = ViewBag.ExistingSizes != null && ((List<int>)ViewBag.ExistingSizes).Contains(size.SizeID);
+                            var stock = ViewBag.StockQuantities != null && ((Dictionary<int, int>)ViewBag.StockQuantities).ContainsKey(size.SizeID) ? ((Dictionary<int, int>)ViewBag.StockQuantities)[size.SizeID] : 0;
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" name="selectedSizes" value="@size.SizeID" class="form-check-input" @(isChecked ? "checked" : "") />
+                                    <label class="form-check-label">@size.SizeName</label>
+                                    <input type="number" name="stockQuantities" class="form-control mt-1" value="@stock" min="0" placeholder="Số lượng" @(isChecked ? "" : "disabled") />
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <span class="text-danger">@Html.ValidationMessage("selectedSizes")</span>
+                </div>
+
+                <!-- Màu sắc -->
+                <div class="form-group mb-3">
+                    <label>Màu sắc</label>
+                    <div class="row">
+                        @foreach (var color in (List<ShoeShopWebsite.Models.Color>)ViewBag.Colors)
+                        {
+                            var isChecked = ViewBag.ExistingColors != null && ((List<int>)ViewBag.ExistingColors).Contains(color.ColorID);
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" name="selectedColors" value="@color.ColorID" class="form-check-input" @(isChecked ? "checked" : "") />
+                                    <label class="form-check-label">@color.ColorName</label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <span class="text-danger">@Html.ValidationMessage("selectedColors")</span>
+                </div>
+            </div>
+
+            <!-- Ảnh -->
+            <div class="col-12 mb-3">
+                <label>Hình ảnh hiện tại</label>
+                <div class="row">
+                    @foreach (var image in Model.ProductImages)
+                    {
+                        <div class="col-md-3 mb-3">
+                            <div class="card">
+                                <img src="@image.ImageURL" class="card-img-top" style="height: 150px; object-fit: cover;">
+                                <div class="card-body text-center">
+                                    <input type="radio" name="primaryImageId" value="@image.ImageID" @(image.IsPrimary ? "checked" : "") /> Ảnh chính
+                                    <br />
+                                    <input type="checkbox" name="deletedImageIds" value="@image.ImageID" class="mt-2" /> Xóa ảnh
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label>Thêm ảnh mới</label>
+                    <input type="file" name="imageFiles" multiple class="form-control" />
+                </div>
+            </div>
+
+            <div class="col-12">
+                <input type="submit" value="Lưu" class="btn btn-primary" />
+                <a asp-action="ProductList" asp-controller="Admin" class="btn btn-secondary">Quay lại</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $('input[name="selectedSizes"]').change(function() {
+            $(this).closest('.form-check').find('input[name="stockQuantities"]').prop('disabled', !this.checked);
+        });
+    </script>
+}

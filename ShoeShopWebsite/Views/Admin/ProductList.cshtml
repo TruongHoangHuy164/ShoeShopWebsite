@@ -1,0 +1,182 @@
+﻿@model IEnumerable<dynamic>
+@{
+    ViewData["Title"] = "Danh sách sản phẩm";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container product-list-container">
+    <h1>Danh sách sản phẩm</h1>
+    <div class="container admin-product-list">
+        <div class="header d-flex justify-content-between align-items-center mb-4">
+            <a href="@Url.Action("CreateProduct", "Admin", new { area = "Admin" })" class="btn btn-add">
+                <i class="fas fa-plus me-1"></i> Thêm sản phẩm mới
+            </a>
+        </div>
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Tên sản phẩm</th>
+                <th>Giá</th>
+                <th>Tồn kho</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Model)
+            {
+                var sizeStockHtml = "";
+                foreach (var size in p.Sizes)
+                {
+                    var stockClass = size.Stock < 10 ? "stock-critical" : "";
+                    sizeStockHtml += $"<span class='size-stock'><strong>{size.SizeName}:</strong> <span class='{stockClass}'>{size.Stock}</span></span>";
+                }
+                <tr>
+                    <td>@p.ProductID</td>
+                    <td>@p.ProductName</td>
+                    <td>@p.Price.ToString("N0") VNĐ</td>
+                    <td>@Html.Raw(sizeStockHtml)</td>
+                    <td>
+                       
+                        <a href="@Url.Action("EditProduct", "Admin", new { id = p.ProductID })" class="btn btn-edit">Sửa</a>
+                        <a href="@Url.Action("DeleteProduct", "Admin", new { id = p.ProductID })" class="btn btn-delete">Xóa</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <a href="@Url.Action("AdminDashboard", "Admin")" class="btn btn-back">Quay lại Dashboard</a>
+</div>
+
+@section Styles {
+    <style>
+        .product-list-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            font-size: 28px;
+            color: #333333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #E0E0E0;
+            padding-bottom: 10px;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .table th, .table td {
+                padding: 12px;
+                border-bottom: 1px solid #E0E0E0;
+                color: #666666;
+                text-align: left;
+            }
+
+            .table th {
+                background-color: #F5F5F5;
+                font-weight: 600;
+            }
+
+            .table tr:hover {
+                background-color: #FAFAFA;
+                transition: background-color 0.2s ease;
+            }
+
+        .size-stock {
+            display: block;
+            font-size: 13px;
+            margin: 2px 0;
+        }
+
+        .stock-critical {
+            color: #F44336;
+            font-weight: bold;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+            display: inline-block;
+            margin-right: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: #2196F3;
+            color: #FFFFFF;
+        }
+
+            .btn-primary:hover {
+                background-color: #1976D2;
+            }
+
+            .btn-add {
+                background-color: #3b82f6;
+                color: #fff;
+                padding: 10px 20px;
+                border-radius: 6px;
+                font-weight: 500;
+                border: none;
+                box-shadow: none;
+                width: auto;
+            }
+
+                .btn-add:hover {
+                    background-color: #2563eb;
+                }
+        .btn-view {
+            background-color: #E0E0E0;
+            color: #333333;
+        }
+
+            .btn-view:hover {
+                background-color: #D0D0D0;
+            }
+
+        .btn-edit {
+            background-color: #FFC107;
+            color: #333333;
+        }
+
+            .btn-edit:hover {
+                background-color: #FFB300;
+            }
+
+        .btn-delete {
+            background-color: #F44336;
+            color: #FFFFFF;
+        }
+
+            .btn-delete:hover {
+                background-color: #D32F2F;
+            }
+
+        .btn-back {
+            background-color: #E0E0E0;
+            color: #333333;
+            padding: 8px 16px;
+            margin-top: 20px;
+        }
+
+            .btn-back:hover {
+                background-color: #D0D0D0;
+            }
+    </style>
+}

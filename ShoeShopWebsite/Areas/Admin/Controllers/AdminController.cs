@@ -10,7 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace ShoeShopWebsite.Controllers
+namespace ShoeShopWebsite.Areas.Admin.Controllers
 {
     [Authorize(Roles = SD.Role_Admin)]
     [Route("Admin")]
@@ -35,8 +35,8 @@ namespace ShoeShopWebsite.Controllers
 
         // GET: /Admin/Dashboard
         [HttpGet]
-        [Route("Dashboard")]
-        public async Task<IActionResult> Dashboard()
+        [Route("AdminDashboard")]
+        public async Task<IActionResult> AdminDashboard()
         {
             var stats = new
             {
@@ -45,10 +45,9 @@ namespace ShoeShopWebsite.Controllers
                 TotalOrders = await _context.Orders.CountAsync(),
                 TotalRevenue = await _context.Orders.Where(o => o.Status == "Completed").SumAsync(o => o.TotalPrice)
             };
-            return View("~/Views/Admin/Dashboard.cshtml", stats);
+            return View("~/Views/Admin/AdminDashboard.cshtml", stats);                    
         }
 
-        // --- Quản lý người dùng ---
 
         [HttpGet]
         [Route("UserList")]
@@ -244,20 +243,20 @@ namespace ShoeShopWebsite.Controllers
 
         // --- Quản lý sản phẩm ---
 
+        // ... (Các phần khác giữ nguyên)
+
         [HttpGet]
         [Route("ProductList")]
         public IActionResult ProductList()
         {
             var products = _context.Products
+                .Include(p => p.ProductSizes).ThenInclude(ps => ps.Size)
                 .Select(p => new
                 {
-                    ProductID = p.ProductID,
-                    ProductName = p.ProductName,
-                    Price = p.Price,
-                    Sizes = _context.ProductSizes
-                        .Where(ps => ps.ProductID == p.ProductID)
-                        .Select(ps => new { SizeName = ps.Size.SizeName, Stock = ps.Stock })
-                        .ToList()
+                    p.ProductID,
+                    p.ProductName,
+                    p.Price,
+                    Sizes = p.ProductSizes.Select(ps => new { ps.Size.SizeName, ps.Stock }).ToList()
                 })
                 .ToList();
 
@@ -405,6 +404,8 @@ namespace ShoeShopWebsite.Controllers
             }
         }
 
+      
+
         // --- Quản lý danh mục ---
 
         [HttpGet]
@@ -466,14 +467,28 @@ namespace ShoeShopWebsite.Controllers
         {
             if (id != category.CategoryID) return NotFound();
 
-            if (!ModelState.IsValid)
+            // Kiểm tra dữ liệu đầu vào
+            if (string.IsNullOrEmpty(category.CategoryName))
             {
+                ModelState.AddModelError("CategoryName", "Tên danh mục là bắt buộc.");
                 return View("~/Views/Admin/EditCategory.cshtml", category);
             }
 
             try
             {
-                _context.Update(category);
+                // Tải danh mục hiện tại từ DB
+                var existingCategory = await _context.Categories.FirstOrDefaultAsync(c => c.CategoryID == id);
+                if (existingCategory == null)
+                {
+                    TempData["ErrorMessage"] = "Không tìm thấy danh mục để cập nhật.";
+                    return RedirectToAction(nameof(CategoryList));
+                }
+
+                // Cập nhật các trường từ dữ liệu form
+                existingCategory.CategoryName = category.CategoryName;
+                existingCategory.Description = category.Description;
+
+                // Lưu thay đổi
                 await _context.SaveChangesAsync();
 
                 TempData["SuccessMessage"] = "Cập nhật danh mục thành công!";

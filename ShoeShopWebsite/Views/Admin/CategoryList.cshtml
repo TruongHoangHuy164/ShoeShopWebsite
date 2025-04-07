@@ -1,28 +1,33 @@
 ﻿@model List<ShoeShopWebsite.Models.Category>
 
 @{
-    ViewData["Title"] = "Quản lý danh mục";
+    ViewData["Title"] = "Danh sách danh mục";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container">
-    <h1>Quản lý danh mục</h1>
+<div class="container py-4">
+    <h1 class="text-center mb-4">Danh sách danh mục</h1>
 
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
     }
     @if (TempData["ErrorMessage"] != null)
     {
-        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
     }
 
-    <a asp-action="CreateCategory" asp-controller="Admin" class="btn btn-success mb-3">Thêm danh mục</a>
+    <a asp-action="CreateCategory" asp-controller="Admin" class="btn btn-primary mb-3">Thêm danh mục mới</a>
 
-    <table class="table table-bordered">
-        <thead>
+    <table class="table table-striped table-hover">
+        <thead class="table-dark">
             <tr>
-                <th>ID</th>
                 <th>Tên danh mục</th>
                 <th>Hành động</th>
             </tr>
@@ -31,18 +36,16 @@
             @foreach (var category in Model)
             {
                 <tr>
-                    <td>@category.CategoryID</td>
                     <td>@category.CategoryName</td>
                     <td>
-                        <a asp-action="EditCategory" asp-route-id="@category.CategoryID" class="btn btn-warning btn-sm">Sửa</a>
-                        <form asp-action="DeleteCategory" asp-route-id="@category.CategoryID" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn xóa danh mục này?');">
-                            <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
+                        <a asp-action="EditCategory" asp-route-id="@category.CategoryID" class="btn btn-sm btn-warning">Sửa</a>
+                        <form asp-action="DeleteCategory" asp-route-id="@category.CategoryID" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Bạn có chắc muốn xóa danh mục này?');">Xóa</button>
                         </form>
                     </td>
                 </tr>
             }
         </tbody>
     </table>
-
-    <a asp-action="Dashboard" asp-controller="Admin" class="btn btn-secondary">Quay lại Dashboard</a>
 </div>

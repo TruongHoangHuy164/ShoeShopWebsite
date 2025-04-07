@@ -18,20 +18,23 @@
                     <input type="text" class="form-control" id="searchName" placeholder="Tìm theo tên sản phẩm" value="@ViewData["SearchName"]">
                 </div>
                 <div class="col-md-3">
-                    <select class="form-select" id="filterColor">
-                        <option value="">Chọn màu</option>
-                        @foreach (var color in ViewData["Colors"] as IEnumerable<ShoeShopWebsite.Models.Color> ?? Enumerable.Empty<ShoeShopWebsite.Models.Color>())
+                    <select class="form-select" id="sortPrice">
+                        <option value="">Mặc định</option>
+                        @if (ViewData["SortPrice"]?.ToString() == "low-to-high")
                         {
-                            <option value="@color.ColorName" selected="@(ViewData["FilterColor"]?.ToString() == color.ColorName ? "selected" : null)">@color.ColorName</option>
+                            <option value="low-to-high" selected>Giá: Thấp đến Cao</option>
                         }
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="filterSize">
-                        <option value="">Chọn kích thước</option>
-                        @foreach (var size in ViewData["Sizes"] as IEnumerable<ShoeShopWebsite.Models.Size> ?? Enumerable.Empty<ShoeShopWebsite.Models.Size>())
+                        else
                         {
-                            <option value="@size.SizeName" selected="@(ViewData["FilterSize"]?.ToString() == size.SizeName ? "selected" : null)">@size.SizeName</option>
+                            <option value="low-to-high">Giá: Thấp đến Cao</option>
+                        }
+                        @if (ViewData["SortPrice"]?.ToString() == "high-to-low")
+                        {
+                            <option value="high-to-low" selected>Giá: Cao đến Thấp</option>
+                        }
+                        else
+                        {
+                            <option value="high-to-low">Giá: Cao đến Thấp</option>
                         }
                     </select>
                 </div>
@@ -40,7 +43,14 @@
                         <option value="">Chọn danh mục</option>
                         @foreach (var category in ViewData["Categories"] as IEnumerable<ShoeShopWebsite.Models.Category> ?? Enumerable.Empty<ShoeShopWebsite.Models.Category>())
                         {
-                            <option value="@category.CategoryName" selected="@(ViewData["FilterCategory"]?.ToString() == category.CategoryName ? "selected" : null)">@category.CategoryName</option>
+                            @if (ViewData["FilterCategory"]?.ToString() == category.CategoryName)
+                            {
+                                <option value="@category.CategoryName" selected>@category.CategoryName</option>
+                            }
+                            else
+                            {
+                                <option value="@category.CategoryName">@category.CategoryName</option>
+                            }
                         }
                     </select>
                 </div>
@@ -56,8 +66,6 @@
                 {
                     <div class="col-md-3 col-6 mb-4 product-item"
                          data-name="@item.ProductName"
-                         data-color="@(item.ProductColors?.FirstOrDefault()?.Color?.ColorName ?? "")"
-                         data-size="@(item.ProductSizes?.FirstOrDefault()?.Size?.SizeName ?? "")"
                          data-category="@item.Category?.CategoryName">
                         <div class="product-card">
                             @if (item.ProductImages != null && item.ProductImages.Any())
@@ -123,10 +131,10 @@
         position: relative;
     }
 
-    .product-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
 
     .product-img {
         max-height: 250px;
@@ -167,9 +175,9 @@
         border-color: #ccc;
     }
 
-    .btn-light:hover {
-        background-color: #e9ecef;
-    }
+        .btn-light:hover {
+            background-color: #e9ecef;
+        }
 
     .wishlist-icon {
         display: none;
@@ -201,61 +209,65 @@
 
             // Tìm kiếm và lọc sản phẩm qua server
             function filterProducts() {
-                const name = $('#searchName').val();
-                const color = $('#filterColor').val();
-                const size = $('#filterSize').val();
-                const category = $('#filterCategory').val();
+                const name = $('#searchName').val() || '';
+                const sortPrice = $('#sortPrice').val() || '';
+                const category = $('#filterCategory').val() || '';
+
+                console.log("Filtering with: ", { name, sortPrice, category });
 
                 window.location.href = '@Url.Action("Index", "Product")' +
                     '?searchName=' + encodeURIComponent(name) +
-                    '&filterColor=' + encodeURIComponent(color) +
-                    '&filterSize=' + encodeURIComponent(size) +
+                    '&sortPrice=' + encodeURIComponent(sortPrice) +
                     '&filterCategory=' + encodeURIComponent(category);
             }
 
-            $('#searchName, #filterColor, #filterSize, #filterCategory').on('change input', function () {
-                console.log("Lọc sản phẩm được gọi!");
+            // Gắn sự kiện cho các input/select
+            $('#searchName').on('input', function () {
+                filterProducts();
+            });
+            $('#sortPrice, #filterCategory').on('change', function () {
                 filterProducts();
             });
 
             // Thêm vào giỏ hàng (CartController)
-                   $('.add-to-cart').on('click', function () {
-            const productId = $(this).data('id');
-            const $sizeSelect = $(this).siblings('.size-select');
-            const sizeId = $sizeSelect.val();
+            $('.add-to-cart').on('click', function () {
+                const productId = $(this).data('id');
+                const $sizeSelect = $(this).siblings('.size-select');
+                const sizeId = $sizeSelect.val();
 
-            if (!sizeId) {
-                showToast('Vui lòng chọn kích thước!', false);
-                return;
-            }
-
-            console.log("Thêm vào giỏ hàng - ProductID:", productId, "SizeID:", sizeId);
-
-            $.ajax({
-                url: '@Url.Action("AddToCart", "Cart")',
-                type: 'POST',
-                data: {
-                    productId: productId,
-                    sizeId: sizeId,
-                    colorId: null, // Thêm colorId mặc định là null
-                    quantity: 1
-                },
-                success: function (response) {
-                    console.log("Phản hồi từ AddToCart:", response);
-                    if (response.success) {
-                        showToast(response.message, true);
-                        $('#cartCount').text(`Cart (${response.cartCount})`);
-                        $(document).trigger('cart-updated');
-                    } else {
-                        showToast(response.message, false);
-                    }
-                },
-                error: function (xhr, status, error) {
-                    console.log("Lỗi AJAX AddToCart:", xhr.status, xhr.responseText);
-                    showToast('Đã có lỗi xảy ra: ' + error, false);
+                if (!sizeId) {
+                    showToast('Vui lòng chọn kích thước!', false);
+                    return;
                 }
+
+                console.log("Thêm vào giỏ hàng - ProductID:", productId, "SizeID:", sizeId);
+
+                $.ajax({
+                    url: '@Url.Action("AddToCart", "Cart")',
+                    type: 'POST',
+                    data: {
+                        productId: productId,
+                        sizeId: sizeId,
+                        colorId: null,
+                        quantity: 1,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (response) {
+                        console.log("Phản hồi từ AddToCart:", response);
+                        if (response.success) {
+                            showToast(response.message, true);
+                            $('#cartCount').text(`Cart (${response.cartCount})`);
+                            $(document).trigger('cart-updated');
+                        } else {
+                            showToast(response.message, false);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.log("Lỗi AJAX AddToCart:", xhr.status, xhr.responseText);
+                        showToast('Đã có lỗi xảy ra: ' + error, false);
+                    }
+                });
             });
-        });
 
             // Thêm vào danh sách yêu thích (ProductController)
             $('.add-to-wishlist').on('click', function () {
@@ -275,7 +287,6 @@
                         if (response.success) {
                             $button.toggleClass('btn-light btn-danger');
                             showToast(response.message, true);
-                            // Cập nhật trạng thái yêu thích nếu cần (ví dụ: đếm số lượng wishlist)
                         } else {
                             showToast(response.message, false);
                         }
@@ -289,7 +300,7 @@
 
             // Hiển thị toast thông báo
             function showToast(message, isSuccess) {
-                var toast = $('#notificationToast'); // Dùng toast từ _Layout.cshtml
+                var toast = $('#notificationToast');
                 toast.find('.toast-body').text(message);
                 toast.removeClass('bg-success bg-danger').addClass(isSuccess ? 'bg-success' : 'bg-danger');
                 toast.toast({ delay: 2000 });
