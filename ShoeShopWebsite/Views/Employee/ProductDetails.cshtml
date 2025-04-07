@@ -1,0 +1,177 @@
+﻿@using ShoeShopWebsite.Models
+@model ShoeShopWebsite.Models.Product
+@{
+    ViewData["Title"] = "Chi tiết sản phẩm";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container">
+    <h1>Chi tiết sản phẩm</h1>
+    <div class="product-details">
+        <div class="details-left">
+            <div class="info-card">
+                <h2>@Model.ProductName</h2>
+                <ul>
+                    <li><strong>ID:</strong> @Model.ProductID</li>
+                    <li><strong>Danh mục:</strong> @Model.Category?.CategoryName ?? "Không xác định"</li>
+                    <li><strong>Giá:</strong> @Model.Price.ToString("N0") VNĐ</li>
+                    <li><strong>Mô tả:</strong> @Model.Description</li>
+                    <li>
+                        <strong>Kích cỡ:</strong>
+                        @{
+                            var sizes = ViewData["Sizes"] as List<Size>;
+                            if (sizes != null && sizes.Any())
+                            {
+                                @string.Join(", ", sizes.Select(s => s.SizeName))
+                            }
+                            else
+                            {
+                                @:Không có kích cỡ
+                            }
+                        }
+                    </li>
+                    <li>
+                        <strong>Màu sắc:</strong>
+                        @{
+                            var colors = ViewData["Colors"] as List<Color>;
+                            if (colors != null && colors.Any())
+                            {
+                                @string.Join(", ", colors.Select(c => c.ColorName))
+                            }
+                            else
+                            {
+                                @:Không có màu sắc
+                            }
+                        }
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="details-right">
+            <div class="image-gallery">
+                <h3>Hình ảnh sản phẩm</h3>
+                <div class="images">
+                    @foreach (var img in Model.ProductImages ?? new List<ProductImage>())
+                    {
+                        <img src="@img.ImageURL" alt="@Model.ProductName" />
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    <a href="/Employee/Dashboard" class="btn btn-back">Quay lại Dashboard</a>
+</div>
+
+@section Styles {
+    <style>
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            font-size: 28px;
+            color: #333333;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #E0E0E0;
+            padding-bottom: 10px;
+        }
+
+        .product-details {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .details-left {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .details-right {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .info-card {
+            background-color: #F9F9F9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #E0E0E0;
+        }
+
+            .info-card h2 {
+                font-size: 22px;
+                color: #333333;
+                margin-bottom: 15px;
+            }
+
+            .info-card ul {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+
+            .info-card li {
+                font-size: 16px;
+                margin-bottom: 10px;
+                color: #666666;
+            }
+
+                .info-card li strong {
+                    color: #333333;
+                    font-weight: 600;
+                }
+
+        .image-gallery {
+            background-color: #F9F9F9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #E0E0E0;
+        }
+
+            .image-gallery h3 {
+                font-size: 18px;
+                color: #666666;
+                margin-bottom: 15px;
+            }
+
+        .images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+            .images img {
+                max-width: 200px;
+                height: auto;
+                border-radius: 4px;
+                border: 1px solid #E0E0E0;
+                transition: transform 0.3s ease;
+            }
+
+                .images img:hover {
+                    transform: scale(1.05);
+                }
+
+        .btn-back {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #E0E0E0;
+            color: #333333;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 20px;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+
+            .btn-back:hover {
+                background-color: #D0D0D0;
+            }
+    </style>
+}

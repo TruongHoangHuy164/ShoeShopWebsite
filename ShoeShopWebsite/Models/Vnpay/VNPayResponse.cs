@@ -1,4 +1,4 @@
-﻿namespace ShoeShopWebsite.Models
+﻿namespace ShoeShopWebsite.Models.Vnpay
 {
     public class VNPayResponse
     {
@@ -10,5 +10,6 @@
         public string vnp_BankCode { get; set; }
         public string vnp_PayDate { get; set; }
         public string vnp_SecureHash { get; set; }
+        public bool IsValidSignature { get; set; }
     }
 }

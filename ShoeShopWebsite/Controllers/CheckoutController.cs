@@ -1,13 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ShoeShopWebsite.Models;
+using ShoeShopWebsite.Models.Vnpay;
 using ShoeShopWebsite.Services;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using ShoeShopWebsite.Services.VnPay;
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 
 namespace ShoeShopWebsite.Controllers
 {
@@ -16,17 +17,12 @@ namespace ShoeShopWebsite.Controllers
         private readonly NikeShopDbContext _context;
         private readonly IMomoService _momoService;
         private readonly IVNPayService _vnpayService;
-        private readonly IConfiguration _configuration;
-        private readonly HttpClient _httpClient;
 
-        public CheckoutController(NikeShopDbContext context, IMomoService momoService, IVNPayService vnpayService, IConfiguration configuration, HttpClient httpClient)
+        public CheckoutController(NikeShopDbContext context, IMomoService momoService, IVNPayService vnpayService)
         {
             _context = context;
             _momoService = momoService;
             _vnpayService = vnpayService;
-            _configuration = configuration;
-            _httpClient = httpClient;
-            _httpClient.BaseAddress = new Uri("https://provinces.open-api.vn/api/");
         }
 
         private string GetSessionId()
@@ -63,97 +59,12 @@ namespace ShoeShopWebsite.Controllers
                 }
 
                 var model = new CheckoutViewModel { CartItems = cartItems };
-
-                var provincesResponse = await _httpClient.GetAsync("p");
-                if (!provincesResponse.IsSuccessStatusCode)
-                {
-                    TempData["ErrorMessage"] = $"Không thể tải danh sách tỉnh/thành phố. Mã lỗi: {provincesResponse.StatusCode}";
-                    return View(model);
-                }
-
-                var provincesJson = await provincesResponse.Content.ReadAsStringAsync();
-                var provinces = JsonSerializer.Deserialize<List<Province>>(
-                    provincesJson,
-                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
-                );
-
-                ViewBag.Provinces = provinces ?? new List<Province>();
                 return View(model);
             }
             catch (Exception ex)
             {
-                TempData["ErrorMessage"] = "Đã xảy ra lỗi khi tải trang thanh toán: " + ex.Message;
+                TempData["ErrorMessage"] = $"Đã xảy ra lỗi khi tải trang thanh toán: {ex.Message}";
                 return RedirectToAction("Index", "Cart");
-            }
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> GetDistricts(int provinceId)
-        {
-            try
-            {
-                if (provinceId <= 0)
-                {
-                    return Json(new { success = false, message = "Vui lòng chọn tỉnh/thành phố hợp lệ." });
-                }
-
-                var response = await _httpClient.GetAsync($"p/{provinceId}?depth=2");
-                if (!response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = false, message = $"Không thể tải danh sách quận/huyện. Mã lỗi: {response.StatusCode}" });
-                }
-
-                var json = await response.Content.ReadAsStringAsync();
-                var province = JsonSerializer.Deserialize<Province>(
-                    json,
-                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
-                );
-
-                if (province?.Districts == null || !province.Districts.Any())
-                {
-                    return Json(new { success = false, message = "Không có quận/huyện nào cho tỉnh/thành phố này." });
-                }
-
-                return Json(province.Districts.Select(d => new { code = d.Code, name = d.Name }));
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = $"Lỗi khi tải quận/huyện: {ex.Message}" });
-            }
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> GetWards(int districtId)
-        {
-            try
-            {
-                if (districtId <= 0)
-                {
-                    return Json(new { success = false, message = "Vui lòng chọn quận/huyện hợp lệ." });
-                }
-
-                var response = await _httpClient.GetAsync($"d/{districtId}?depth=2");
-                if (!response.IsSuccessStatusCode)
-                {
-                    return Json(new { success = false, message = $"Không thể tải danh sách phường/xã. Mã lỗi: {response.StatusCode}" });
-                }
-
-                var json = await response.Content.ReadAsStringAsync();
-                var district = JsonSerializer.Deserialize<District>(
-                    json,
-                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
-                );
-
-                if (district?.Wards == null || !district.Wards.Any())
-                {
-                    return Json(new { success = false, message = "Không có phường/xã nào cho quận/huyện này." });
-                }
-
-                return Json(district.Wards.Select(w => new { code = w.Code, name = w.Name }));
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = $"Lỗi khi tải phường/xã: {ex.Message}" });
             }
         }
 
@@ -161,9 +72,10 @@ namespace ShoeShopWebsite.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ProcessPayment(CheckoutViewModel model)
         {
+            var sessionId = GetSessionId();
+
             try
             {
-                var sessionId = GetSessionId();
                 var cartItems = await _context.Carts
                     .Include(c => c.Product)
                     .Include(c => c.Size)
@@ -175,41 +87,51 @@ namespace ShoeShopWebsite.Controllers
 
                 if (!cartItems.Any())
                 {
-                    return BadRequest(new { success = false, message = "Giỏ hàng trống!" });
+                    TempData["ErrorMessage"] = "Giỏ hàng trống!";
+                    return RedirectToAction("Index");
                 }
 
+                // Kiểm tra ModelState trước để tận dụng validation từ CheckoutViewModel
                 if (!ModelState.IsValid)
                 {
-                    var errors = ModelState.SelectMany(kvp => kvp.Value.Errors).Select(e => e.ErrorMessage);
-                    return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ: " + string.Join(", ", errors) });
+                    model.CartItems = cartItems;
+                    return View("Index", model);
                 }
 
-                if (model.ProvinceId <= 0 || model.DistrictId <= 0 || model.WardId <= 0)
+                // Kiểm tra PhoneNumber (dự phòng nếu validation bị bỏ qua)
+                if (string.IsNullOrEmpty(model.PhoneNumber))
                 {
-                    return BadRequest(new { success = false, message = "Vui lòng chọn đầy đủ tỉnh/thành phố, quận/huyện và phường/xã." });
+                    ModelState.AddModelError("PhoneNumber", "Số điện thoại là bắt buộc.");
+                    model.CartItems = cartItems;
+                    return View("Index", model);
                 }
 
-                var province = await GetProvinceName(model.ProvinceId);
-                var district = await GetDistrictName(model.DistrictId);
-                var ward = await GetWardName(model.WardId);
-
-                if (string.IsNullOrEmpty(province) || string.IsNullOrEmpty(district) || string.IsNullOrEmpty(ward))
+                var phoneRegex = new Regex("^0\\d{9}$");
+                if (!phoneRegex.IsMatch(model.PhoneNumber))
                 {
-                    string errorMessage = "Không thể lấy thông tin địa chỉ. ";
-                    if (string.IsNullOrEmpty(province)) errorMessage += $"Tỉnh/thành phố không hợp lệ (ProvinceId: {model.ProvinceId}). ";
-                    if (string.IsNullOrEmpty(district)) errorMessage += $"Quận/huyện không hợp lệ (DistrictId: {model.DistrictId}). ";
-                    if (string.IsNullOrEmpty(ward)) errorMessage += $"Phường/xã không hợp lệ (WardId: {model.WardId}).";
-                    return BadRequest(new { success = false, message = errorMessage });
+                    ModelState.AddModelError("PhoneNumber", "Số điện thoại phải bắt đầu bằng 0 và có đúng 10 chữ số.");
+                    model.CartItems = cartItems;
+                    return View("Index", model);
                 }
 
-                var fullAddress = $"{model.AddressDetail}, {ward}, {district}, {province}";
+                if (string.IsNullOrEmpty(model.PaymentMethod))
+                {
+                    TempData["ErrorMessage"] = "Phương thức thanh toán không được để trống!";
+                    model.CartItems = cartItems;
+                    return View("Index", model);
+                }
+
+                Console.WriteLine($"[ProcessPayment] PaymentMethod received: {model.PaymentMethod}");
+                Console.WriteLine($"[ProcessPayment] FullName: {model.FullName}, PhoneNumber: {model.PhoneNumber}, AddressDetail: {model.AddressDetail}, Ward: {model.Ward}, District: {model.District}, Province: {model.Province}");
+
+                var fullAddress = $"{model.AddressDetail ?? ""}, {model.Ward ?? ""}, {model.District ?? ""}, {model.Province ?? ""}";
                 var order = new Order
                 {
                     SessionId = sessionId,
-                    FullName = model.FullName,
+                    FullName = model.FullName, // Đã được kiểm tra bởi ModelState
                     Address = fullAddress,
-                    PhoneNumber = model.PhoneNumber,
-                    Note = model.Note,
+                    PhoneNumber = model.PhoneNumber, // Đã kiểm tra null
+                    Note = model.Note ?? "",
                     TotalPrice = cartItems.Sum(c => c.Product.Price * c.Quantity),
                     OrderDate = DateTime.Now,
                     Status = "Pending",
@@ -229,11 +151,23 @@ namespace ShoeShopWebsite.Controllers
 
                 foreach (var item in cartItems)
                 {
-                    var productSize = item.Product.ProductSizes.FirstOrDefault(ps => ps.SizeID == item.SizeID);
-                    if (productSize == null || productSize.Stock < item.Quantity)
+                    var productSize = await _context.ProductSizes
+                        .FirstOrDefaultAsync(ps => ps.ProductID == item.ProductID && ps.SizeID == item.SizeID);
+
+                    if (productSize == null)
                     {
-                        return BadRequest(new { success = false, message = $"Sản phẩm {item.Product.ProductName} (Size: {item.Size.SizeName}) không đủ hàng." });
+                        TempData["ErrorMessage"] = $"Không tìm thấy thông tin kích thước cho sản phẩm {item.Product.ProductName} (Size: {item.Size.SizeName}).";
+                        model.CartItems = cartItems;
+                        return View("Index", model);
                     }
+
+                    if (productSize.Stock < item.Quantity)
+                    {
+                        TempData["ErrorMessage"] = $"Sản phẩm {item.Product.ProductName} (Size: {item.Size.SizeName}) không đủ hàng. Còn lại: {productSize.Stock}.";
+                        model.CartItems = cartItems;
+                        return View("Index", model);
+                    }
+
                     productSize.Stock -= item.Quantity;
                 }
 
@@ -245,111 +179,160 @@ namespace ShoeShopWebsite.Controllers
                         order.Status = "Completed";
                         _context.Carts.RemoveRange(cartItems);
                         await _context.SaveChangesAsync();
-                        return Ok(new { success = true, redirectUrl = Url.Action("OrderConfirmation", new { orderId = order.OrderID }), message = "Đặt hàng thành công (COD)!" });
+                        TempData["SuccessMessage"] = "Đặt hàng thành công (COD)!";
+                        return RedirectToAction("OrderConfirmation", new { orderId = order.OrderID });
 
                     case "MoMo":
-                        var momoResponse = await _momoService.CreatePaymentAsync(order);
-                        if (momoResponse?.resultCode == 0)
+                        var orderInfo = new OrderInfoModel
                         {
-                            return Ok(new { success = true, redirectUrl = momoResponse.payUrl, message = "Chuyển hướng đến MoMo!" });
+                            OrderId = order.OrderID.ToString(),
+                            FullName = order.FullName,
+                            Amount = order.TotalPrice,
+                            OrderInfo = $"Thanh toán đơn hàng #{order.OrderID}"
+                        };
+
+                        if (orderInfo.Amount < 1000 || orderInfo.Amount > 50000000)
+                        {
+                            TempData["ErrorMessage"] = "Số tiền không hợp lệ cho MoMo. Phải từ 1,000 đến 50,000,000 VND.";
+                            model.CartItems = cartItems;
+                            return View("Index", model);
                         }
-                        return BadRequest(new { success = false, message = "Thanh toán MoMo thất bại!" });
+
+                        var momoResponse = await _momoService.CreatePaymentAsync(orderInfo);
+                        if (momoResponse?.ErrorCode == 0)
+                        {
+                            _context.Carts.RemoveRange(cartItems);
+                            await _context.SaveChangesAsync();
+                            return Redirect(momoResponse.PayUrl);
+                        }
+                        TempData["ErrorMessage"] = $"Thanh toán MoMo thất bại: {momoResponse?.Message ?? "Không có thông tin lỗi"}";
+                        model.CartItems = cartItems;
+                        return View("Index", model);
 
                     case "VNPay":
-                        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
-                        if (string.IsNullOrEmpty(ipAddress))
+                        var totalPrice = cartItems.Sum(c => c.Product.Price * c.Quantity);
+                        Console.WriteLine($"[VNPay] Raw TotalPrice: {totalPrice}");
+
+                        if (totalPrice < 5000 || totalPrice >= 1000000000)
                         {
-                            return BadRequest(new { success = false, message = "Không thể lấy địa chỉ IP để thanh toán VNPay." });
+                            TempData["ErrorMessage"] = "Số tiền giao dịch không hợp lệ. Số tiền phải từ 5,000 đến dưới 1 tỷ đồng.";
+                            model.CartItems = cartItems;
+                            return View("Index", model);
                         }
-                        var vnpayUrl = _vnpayService.CreatePaymentUrl(order, ipAddress);
-                        return Ok(new { success = true, redirectUrl = vnpayUrl, message = "Chuyển hướng đến VNPay!" });
+
+                        var paymentInfo = new PaymentInformationModel
+                        {
+                            Name = order.FullName,
+                            OrderDescription = $"Thanh toan don hang #{order.OrderID}",
+                            OrderType = "250000",
+                            Amount = (double)(totalPrice)
+                        };
+                        Console.WriteLine($"[VNPay] Sending data: Name={paymentInfo.Name}, Description={paymentInfo.OrderDescription}, Amount={paymentInfo.Amount}, OrderType={paymentInfo.OrderType}");
+                        try
+                        {
+                            var vnpayUrl = _vnpayService.CreatePaymentUrl(paymentInfo, HttpContext);
+                            Console.WriteLine($"[VNPay] Generated URL: {vnpayUrl}");
+                            if (string.IsNullOrEmpty(vnpayUrl))
+                            {
+                                TempData["ErrorMessage"] = "Không thể tạo URL thanh toán VNPay. Vui lòng kiểm tra log.";
+                                model.CartItems = cartItems;
+                                return View("Index", model);
+                            }
+                            _context.Carts.RemoveRange(cartItems);
+                            await _context.SaveChangesAsync();
+                            HttpContext.Session.SetInt32("PendingOrderId", order.OrderID);
+                            return Redirect(vnpayUrl);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[VNPay] Error creating URL: {ex.Message}");
+                            TempData["ErrorMessage"] = $"Lỗi khi tạo URL thanh toán VNPay: {ex.Message}";
+                            model.CartItems = cartItems;
+                            return View("Index", model);
+                        }
 
                     default:
-                        return BadRequest(new { success = false, message = "Phương thức thanh toán không hợp lệ!" });
+                        TempData["ErrorMessage"] = $"Phương thức thanh toán không hợp lệ! Giá trị nhận được: '{model.PaymentMethod}'";
+                        model.CartItems = cartItems;
+                        return View("Index", model);
                 }
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = $"Lỗi xử lý thanh toán: {ex.Message}" });
+                TempData["ErrorMessage"] = $"Lỗi xử lý thanh toán: {ex.Message}";
+                Console.WriteLine($"[ProcessPayment] Exception: {ex.Message}, StackTrace: {ex.StackTrace}");
+                model.CartItems = await _context.Carts
+                    .Include(c => c.Product)
+                    .Include(c => c.Size)
+                    .Include(c => c.Color)
+                    .Where(c => c.SessionId == sessionId)
+                    .ToListAsync();
+                return View("Index", model);
             }
         }
 
-        private async Task<string> GetProvinceName(int provinceId)
+        [HttpGet]
+        public IActionResult OrderConfirmation(int orderId)
         {
-            try
+            var order = _context.Orders
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Product)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Size)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Color)
+                .FirstOrDefault(o => o.OrderID == orderId);
+
+            if (order == null)
             {
-                if (provinceId <= 0) return string.Empty;
-
-                var response = await _httpClient.GetAsync($"p/{provinceId}");
-                if (!response.IsSuccessStatusCode)
-                {
-                    return string.Empty;
-                }
-
-                var json = await response.Content.ReadAsStringAsync();
-                var province = JsonSerializer.Deserialize<Province>(
-                    json,
-                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
-                );
-
-                return province?.Name ?? string.Empty;
+                TempData["ErrorMessage"] = "Không tìm thấy đơn hàng.";
+                return RedirectToAction("Index", "Home");
             }
-            catch (Exception)
-            {
-                return string.Empty;
-            }
+
+            return View(order);
         }
 
-        private async Task<string> GetDistrictName(int districtId)
+        [HttpGet]
+        public async Task<IActionResult> VNPayCallback()
         {
-            try
+            var response = _vnpayService.PaymentExecute(Request.Query);
+            Console.WriteLine($"[VNPayCallback] Response: Success={response.Success}, VnPayResponseCode={response.VnPayResponseCode}");
+
+            if (!response.Success)
             {
-                if (districtId <= 0) return string.Empty;
-
-                var response = await _httpClient.GetAsync($"d/{districtId}");
-                if (!response.IsSuccessStatusCode)
-                {
-                    return string.Empty;
-                }
-
-                var json = await response.Content.ReadAsStringAsync();
-                var district = JsonSerializer.Deserialize<District>(
-                    json,
-                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
-                );
-
-                return district?.Name ?? string.Empty;
+                TempData["ErrorMessage"] = "Chữ ký không hợp lệ từ VNPay!";
+                return RedirectToAction("Index");
             }
-            catch (Exception)
+
+            var orderId = HttpContext.Session.GetInt32("PendingOrderId");
+            if (!orderId.HasValue)
             {
-                return string.Empty;
+                TempData["ErrorMessage"] = "Không thể xác định đơn hàng từ callback!";
+                return RedirectToAction("Index");
             }
-        }
 
-        private async Task<string> GetWardName(int wardId)
-        {
-            try
+            var order = await _context.Orders.FirstOrDefaultAsync(o => o.OrderID == orderId.Value);
+            if (order == null)
             {
-                if (wardId <= 0) return string.Empty;
-
-                var response = await _httpClient.GetAsync($"w/{wardId}");
-                if (!response.IsSuccessStatusCode)
-                {
-                    return string.Empty;
-                }
-
-                var json = await response.Content.ReadAsStringAsync();
-                var ward = JsonSerializer.Deserialize<Ward>(
-                    json,
-                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
-                );
-
-                return ward?.Name ?? string.Empty;
+                TempData["ErrorMessage"] = "Không tìm thấy đơn hàng!";
+                return RedirectToAction("Index");
             }
-            catch (Exception)
+
+            if (response.VnPayResponseCode == "00")
             {
-                return string.Empty;
+                order.Status = "Completed";
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Thanh toán VNPay thành công!";
             }
+            else
+            {
+                order.Status = "Failed";
+                await _context.SaveChangesAsync();
+                TempData["ErrorMessage"] = $"Thanh toán VNPay thất bại! Mã lỗi: {response.VnPayResponseCode}";
+            }
+
+            HttpContext.Session.Remove("PendingOrderId");
+            return RedirectToAction("OrderConfirmation", new { orderId = order.OrderID });
         }
     }
 }

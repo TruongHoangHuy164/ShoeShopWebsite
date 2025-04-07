@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using ShoeShopWebsite.Models;
 
 namespace ShoeShopWebsite.Models
 {
@@ -10,9 +9,14 @@ namespace ShoeShopWebsite.Models
         [Required(ErrorMessage = "Họ và tên là bắt buộc.")]
         public string? FullName { get; set; }
 
-        public int ProvinceId { get; set; }
-        public int DistrictId { get; set; }
-        public int WardId { get; set; }
+        [Required(ErrorMessage = "Tỉnh/Thành phố là bắt buộc.")]
+        public string? Province { get; set; }
+
+        [Required(ErrorMessage = "Quận/Huyện là bắt buộc.")]
+        public string? District { get; set; }
+
+        [Required(ErrorMessage = "Phường/Xã là bắt buộc.")]
+        public string? Ward { get; set; }
 
         [Required(ErrorMessage = "Địa chỉ chi tiết là bắt buộc.")]
         public string? AddressDetail { get; set; }

@@ -2,8 +2,12 @@
 using Microsoft.EntityFrameworkCore;
 using ShoeShopWebsite.Models;
 using ShoeShopWebsite.Services;
+using ShoeShopWebsite.Services.VnPay;
+
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddScoped<IMomoService, MomoService>();
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
@@ -35,6 +39,13 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddDefaultUI()
     .AddEntityFrameworkStores<NikeShopDbContext>();
 
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Identity/Account/Login";
+    options.LogoutPath = "/Identity/Account/Logout";
+    options.AccessDeniedPath = "/Identity/Account/AccessDenied";
+});
+
 // Thêm IHttpContextAccessor
 builder.Services.AddHttpContextAccessor();
 
@@ -44,10 +55,10 @@ builder.Services.AddHttpClient();
 // Thêm Razor Pages
 builder.Services.AddRazorPages();
 
-// Thêm dịch vụ MoMo và VNPay
-builder.Services.AddScoped<IMomoService, MomoService>();
-builder.Services.AddScoped<IVNPayService, VNPayService>();
+// Cấu hình dịch vụ VNPay
+builder.Services.AddScoped<IVNPayService, VnPayService>();
 
+// Thêm dịch vụ MoMo và VNPay
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -59,7 +70,6 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
 
 // Đảm bảo thứ tự middleware
@@ -68,6 +78,10 @@ app.UseCookiePolicy();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapControllerRoute(
+    name: "areas",
+    pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}"
+);
 // Cấu hình route
 app.MapControllerRoute(
     name: "default",

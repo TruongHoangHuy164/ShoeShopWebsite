@@ -1,5 +1,6 @@
 ﻿@using Microsoft.EntityFrameworkCore
 @using ShoeShopWebsite.Models
+@using Microsoft.AspNetCore.Authorization
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,9 +11,9 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true">
     <link rel="stylesheet" href="~/ShoeShopWebsite.styles.css" asp-append-version="true">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    @RenderSection("Styles", required: false) <!-- Thêm để render section Styles -->
 </head>
 <body>
-
     <!-- Toast container -->
     <div class="toast-container">
         <div id="notificationToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
@@ -30,7 +31,7 @@
     </div>
 
     <header>
-        <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(90deg, #FFBD71, #FFDCA2); border-radius: 15px; margin: 10px auto; max-width: 95%;">
+        <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(90deg, #FFBD71, #FFDCA2); border-radius: 15px; margin: 10px auto; max-width: 1450px;">
             <div class="container">
                 <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
                     <img src="~/images/logoshoe.png" alt="Nike Logo" class="logo" style="max-height: 40px;">
@@ -46,9 +47,6 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-controller="Product" asp-action="Index">Shop</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Product" asp-action="Create">Add Product</a>
                         </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link text-dark dropdown-toggle" href="#" id="categoryDropdown"
@@ -66,6 +64,14 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-controller="Contact" asp-action="Index">Contact</a>
                         </li>
+                        @if (User.IsInRole("Employee"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Employee" asp-action="Dashboard">
+                                    <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                                </a>
+                            </li>
+                        }
                     </ul>
                 </div>
                 <div class="d-flex align-items-center">
@@ -132,11 +138,9 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script>
         $(document).ready(function () {
-            // Lấy số lượng giỏ hàng và wishlist khi trang được tải
             updateCartCount();
             updateWishlistCount();
 
-            // Hàm hiển thị toast notification
             function showToast(message, isSuccess = true) {
                 var toast = $('#notificationToast');
                 toast.find('.toast-body').text(message);
@@ -145,7 +149,6 @@
                 toast.toast('show');
             }
 
-            // Hàm hiển thị/hide loading
             function showLoading() {
                 $('#loadingOverlay').show();
             }
@@ -153,7 +156,6 @@
                 $('#loadingOverlay').hide();
             }
 
-            // Hàm cập nhật số lượng giỏ hàng
             function updateCartCount() {
                 $.get('@Url.Action("GetCartCount", "Cart")', function (count) {
                     $('#cartCount').text(`Cart (${count})`);
@@ -162,7 +164,6 @@
                 });
             }
 
-            // Hàm cập nhật số lượng wishlist
             function updateWishlistCount() {
                 $.get('@Url.Action("GetWishlistCount", "Product")', function (count) {
                     $('#wishlistCount').text(`Wishlist (${count})`);
@@ -171,7 +172,6 @@
                 });
             }
 
-            // Lắng nghe sự kiện tùy chỉnh
             $(document).on('cart-updated', function () {
                 updateCartCount();
             });
@@ -181,7 +181,7 @@
             });
         });
     </script>
-    @Html.AntiForgeryToken() <!-- Thêm token CSRF -->
+    @Html.AntiForgeryToken()
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
@@ -190,11 +190,12 @@
     /* CSS cho thanh nav */
     .navbar {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        padding: 0.5rem 1rem;
     }
 
     .navbar-nav .nav-link {
         color: #333 !important;
-        padding: 10px 15px;
+        padding: 8px 12px;
         transition: color 0.3s ease;
     }
 

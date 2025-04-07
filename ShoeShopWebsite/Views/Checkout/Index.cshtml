@@ -11,6 +11,10 @@
     {
         <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
     }
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
 
     <div class="row">
         <div class="col-md-6">
@@ -25,41 +29,21 @@
                 </div>
 
                 <div class="mb-3">
-                    <label for="ProvinceId" class="form-label">Tỉnh/Thành phố</label>
-                    <select asp-for="ProvinceId" class="form-select" id="province" required>
-                        <option value="">Chọn tỉnh/thành</option>
-                        @{
-                            var provinces = ViewBag.Provinces as List<Province> ?? new List<Province>();
-                            if (provinces.Any())
-                            {
-                                foreach (var province in provinces)
-                                {
-                                    <option value="@province.Code">@province.Name</option>
-                                }
-                            }
-                            else
-                            {
-                                <option value="" disabled>Không có tỉnh/thành phố nào</option>
-                            }
-                        }
-                    </select>
-                    <span asp-validation-for="ProvinceId" class="text-danger"></span>
+                    <label for="Province" class="form-label">Tỉnh/Thành phố</label>
+                    <input asp-for="Province" class="form-control" required />
+                    <span asp-validation-for="Province" class="text-danger"></span>
                 </div>
 
                 <div class="mb-3">
-                    <label for="DistrictId" class="form-label">Quận/Huyện</label>
-                    <select asp-for="DistrictId" class="form-select" id="district" required disabled>
-                        <option value="">Chọn quận/huyện</option>
-                    </select>
-                    <span asp-validation-for="DistrictId" class="text-danger"></span>
+                    <label for="District" class="form-label">Quận/Huyện</label>
+                    <input asp-for="District" class="form-control" required />
+                    <span asp-validation-for="District" class="text-danger"></span>
                 </div>
 
                 <div class="mb-3">
-                    <label for="WardId" class="form-label">Phường/Xã</label>
-                    <select asp-for="WardId" class="form-select" id="ward" required disabled>
-                        <option value="">Chọn phường/xã</option>
-                    </select>
-                    <span asp-validation-for="WardId" class="text-danger"></span>
+                    <label for="Ward" class="form-label">Phường/Xã</label>
+                    <input asp-for="Ward" class="form-control" required />
+                    <span asp-validation-for="Ward" class="text-danger"></span>
                 </div>
 
                 <div class="mb-3">
@@ -148,189 +132,6 @@
     </div>
 </div>
 
-<div id="toastContainer" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050;"></div>
-<div id="loading" class="position-fixed top-50 start-50 translate-middle" style="display: none;">
-    <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Đang tải...</span>
-    </div>
-</div>
-
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
-    <script>
-        $(document).ready(function () {
-            // Hàm hiển thị/ẩn loading
-            function showLoading() { $('#loading').show(); }
-            function hideLoading() { $('#loading').hide(); }
-
-            // Hàm hiển thị toast
-            function showToast(message, isSuccess) {
-                if ($('#toastContainer .toast').length >= 3) {
-                    $('#toastContainer .toast').first().remove();
-                }
-                var toastHtml = `
-                    <div class="toast align-items-center text-white ${isSuccess ? 'bg-success' : 'bg-danger'} border-0" role="alert">
-                        <div class="d-flex">
-                            <div class="toast-body">${message}</div>
-                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                        </div>
-                    </div>`;
-                $('#toastContainer').append(toastHtml);
-                var $toast = $('#toastContainer .toast').last();
-                $toast.toast({ delay: 3000 });
-                $toast.toast('show');
-                $toast.on('hidden.bs.toast', function () { $(this).remove(); });
-            }
-
-            // Xử lý sự kiện thay đổi tỉnh/thành phố
-            $('#province').change(function () {
-                var provinceId = parseInt($(this).val());
-                $('#district').html('<option value="">Chọn quận/huyện</option>');
-                $('#ward').html('<option value="">Chọn phường/xã</option>');
-                $('#district').prop('disabled', true);
-                $('#ward').prop('disabled', true);
-
-                if (provinceId > 0) {
-                    showLoading();
-                    $.ajax({
-                        url: '@Url.Action("GetDistricts", "Checkout")',
-                        type: 'GET',
-                        data: { provinceId: provinceId },
-                        success: function (data) {
-                            hideLoading();
-                            if (Array.isArray(data) && data.length > 0) {
-                                $('#district').prop('disabled', false);
-                                data.forEach(function (district) {
-                                    $('#district').append(`<option value="${district.code}">${district.name}</option>`);
-                                });
-                            } else {
-                                showToast(data.message || 'Không có quận/huyện nào cho tỉnh/thành phố này.', false);
-                            }
-                        },
-                        error: function (xhr) {
-                            hideLoading();
-                            showToast('Lỗi khi tải danh sách quận/huyện: ' + (xhr.responseText || 'Không xác định'), false);
-                        }
-                    });
-                }
-            });
-
-            // Xử lý sự kiện thay đổi quận/huyện
-            $('#district').change(function () {
-                var districtId = parseInt($(this).val());
-                $('#ward').html('<option value="">Chọn phường/xã</option>');
-                $('#ward').prop('disabled', true);
-
-                if (districtId > 0) {
-                    showLoading();
-                    $.ajax({
-                        url: '@Url.Action("GetWards", "Checkout")',
-                        type: 'GET',
-                        data: { districtId: districtId },
-                        success: function (data) {
-                            hideLoading();
-                            if (Array.isArray(data) && data.length > 0) {
-                                $('#ward').prop('disabled', false);
-                                data.forEach(function (ward) {
-                                    $('#ward').append(`<option value="${ward.code}">${ward.name}</option>`);
-                                });
-                            } else {
-                                showToast(data.message || 'Không có phường/xã nào cho quận/huyện này.', false);
-                            }
-                        },
-                        error: function (xhr) {
-                            hideLoading();
-                            showToast('Lỗi khi tải danh sách phường/xã: ' + (xhr.responseText || 'Không xác định'), false);
-                        }
-                    });
-                }
-            });
-
-            // Xử lý sự kiện gửi form
-            $('#checkoutForm').submit(function (e) {
-                e.preventDefault();
-                showLoading();
-
-                // Lấy dữ liệu từ form
-                var formData = {
-                    FullName: $('#FullName').val(),
-                    ProvinceId: parseInt($('#province').val()),
-                    DistrictId: parseInt($('#district').val()),
-                    WardId: parseInt($('#ward').val()),
-                    AddressDetail: $('#AddressDetail').val(),
-                    PhoneNumber: $('#PhoneNumber').val(),
-                    Note: $('#Note').val(),
-                    PaymentMethod: $('input[name="PaymentMethod"]:checked').val(),
-                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                };
-
-                // Kiểm tra dữ liệu đầu vào
-                if (!formData.FullName) {
-                    hideLoading();
-                    showToast('Vui lòng nhập họ và tên.', false);
-                    return;
-                }
-                if (isNaN(formData.ProvinceId) || formData.ProvinceId <= 0) {
-                    hideLoading();
-                    showToast('Vui lòng chọn tỉnh/thành phố.', false);
-                    return;
-                }
-                if (isNaN(formData.DistrictId) || formData.DistrictId <= 0) {
-                    hideLoading();
-                    showToast('Vui lòng chọn quận/huyện.', false);
-                    return;
-                }
-                if (isNaN(formData.WardId) || formData.WardId <= 0) {
-                    hideLoading();
-                    showToast('Vui lòng chọn phường/xã.', false);
-                    return;
-                }
-                if (!formData.AddressDetail) {
-                    hideLoading();
-                    showToast('Vui lòng nhập địa chỉ chi tiết.', false);
-                    return;
-                }
-                if (!formData.PhoneNumber) {
-                    hideLoading();
-                    showToast('Vui lòng nhập số điện thoại.', false);
-                    return;
-                }
-                var phoneRegex = /^0\d{9}$/;
-                if (!phoneRegex.test(formData.PhoneNumber)) {
-                    hideLoading();
-                    showToast('Số điện thoại phải bắt đầu bằng 0 và có đúng 10 chữ số.', false);
-                    return;
-                }
-                if (!formData.PaymentMethod) {
-                    hideLoading();
-                    showToast('Vui lòng chọn phương thức thanh toán.', false);
-                    return;
-                }
-
-                // Gửi yêu cầu thanh toán
-                $.ajax({
-                    url: '@Url.Action("ProcessPayment", "Checkout")',
-                    type: 'POST',
-                    data: formData,
-                    success: function (data) {
-                        hideLoading();
-                        if (data.success) {
-                            showToast(data.message || 'Thanh toán thành công!', true);
-                            if (data.redirectUrl) {
-                                setTimeout(function () { window.location.href = data.redirectUrl; }, 1000);
-                            }
-                        } else {
-                            showToast(data.message || 'Có lỗi xảy ra khi thanh toán.', false);
-                        }
-                    },
-                    error: function (xhr) {
-                        hideLoading();
-                        showToast('Lỗi khi gửi yêu cầu thanh toán: ' + (xhr.responseText || 'Không xác định'), false);
-                    }
-                });
-            });
-        });
-    </script>
 }

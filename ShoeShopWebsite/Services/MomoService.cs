@@ -1,100 +1,91 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using RestSharp;
 using ShoeShopWebsite.Models;
+using ShoeShopWebsite.Models.Momo;
+using System;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace ShoeShopWebsite.Services
 {
     public class MomoService : IMomoService
     {
-        private readonly IConfiguration _configuration;
-        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IOptions<MomoOptionModel> _options;
 
-        public MomoService(IConfiguration configuration, IHttpClientFactory httpClientFactory)
+        public MomoService(IOptions<MomoOptionModel> options)
         {
-            _configuration = configuration;
-            _httpClientFactory = httpClientFactory;
+            _options = options;
         }
 
-        public async Task<MomoResponse> CreatePaymentAsync(Order order)
+        public async Task<MomoCreatePaymentResponseModel> CreatePaymentAsync(OrderInfoModel model)
         {
-            var partnerCode = _configuration["MomoAPI:PartnerCode"];
-            var accessKey = _configuration["MomoAPI:AccessKey"];
-            var secretKey = _configuration["MomoAPI:SecretKey"];
-            var requestId = DateTime.Now.Ticks.ToString();
-            var orderId = order.OrderID.ToString();
-            var orderInfo = $"Thanh toán đơn hàng #{order.OrderID}";
-            var redirectUrl = _configuration["MomoAPI:ReturnUrl"];
-            var ipnUrl = _configuration["MomoAPI:NotifyUrl"];
-            var requestType = _configuration["MomoAPI:RequestType"];
-            var amount = ((long)order.TotalPrice).ToString(); // Đảm bảo là chuỗi số nguyên
+            model.OrderId = DateTime.UtcNow.Ticks.ToString();
+            model.OrderInfo = "Khách hàng: " + model.FullName + ". Nội dung: " + model.OrderInfo;
+            var rawData =
+                $"partnerCode={_options.Value.PartnerCode}" +
+                $"&accessKey={_options.Value.AccessKey}" +
+                $"&requestId={model.OrderId}" +
+                $"&amount={model.Amount}" +
+                $"&orderId={model.OrderId}" +
+                $"&orderInfo={model.OrderInfo}" +
+                $"&returnUrl={_options.Value.ReturnUrl}" +
+                $"&notifyUrl={_options.Value.NotifyUrl}" +
+                $"&extraData=";
+            var signature = ComputeHmacSha256(rawData, _options.Value.SecretKey);
 
-            var rawData = $"accessKey={accessKey}&amount={amount}&extraData=&ipnUrl={ipnUrl}&orderId={orderId}&orderInfo={orderInfo}&partnerCode={partnerCode}&redirectUrl={redirectUrl}&requestId={requestId}&requestType={requestType}";
-            var signature = ComputeHmacSha256(rawData, secretKey);
+            var client = new RestClient(_options.Value.MomoApiUrl);
+            var request = new RestRequest() { Method = Method.Post };
+            request.AddHeader("Content-Type", "application/json; charset=UTF-8");
 
-            Console.WriteLine($"Raw Data: {rawData}");
-            Console.WriteLine($"Signature: {signature}");
-
-            var request = new MomoRequest
+            var requestData = new
             {
-                partnerCode = partnerCode,
-                accessKey = accessKey,
-                requestId = requestId,
-                amount = amount, // Sử dụng chuỗi
-                orderId = orderId,
-                orderInfo = orderInfo,
-                redirectUrl = redirectUrl,
-                ipnUrl = ipnUrl,
-                requestType = requestType,
+                accessKey = _options.Value.AccessKey,
+                partnerCode = _options.Value.PartnerCode,
+                requestType = _options.Value.RequestType,
+                notifyUrl = _options.Value.NotifyUrl,
+                returnUrl = _options.Value.ReturnUrl,
+                orderId = model.OrderId,
+                amount = model.Amount.ToString(),
+                orderInfo = model.OrderInfo,
+                requestId = model.OrderId,
                 extraData = "",
                 signature = signature
             };
 
-            var client = _httpClientFactory.CreateClient();
-            var json = JsonConvert.SerializeObject(request);
-            Console.WriteLine($"Request JSON: {json}");
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await client.PostAsync(_configuration["MomoAPI:MomoApiUrl"], content);
+            request.AddParameter("application/json", JsonConvert.SerializeObject(requestData), ParameterType.RequestBody);
+            var response = await client.ExecuteAsync(request);
 
-            var responseString = await response.Content.ReadAsStringAsync();
-            Console.WriteLine($"MoMo Response: {responseString}");
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new Exception($"MoMo payment failed: {responseString}");
-            }
-
-            return JsonConvert.DeserializeObject<MomoResponse>(responseString) ?? new MomoResponse();
+            return JsonConvert.DeserializeObject<MomoCreatePaymentResponseModel>(response.Content);
         }
 
-        public MomoCallback PaymentExecuteAsync(IQueryCollection query)
+        public MomoExecuteResponseModel PaymentExecuteAsync(IQueryCollection collection)
         {
-            var callback = new MomoCallback
+            var amount = collection.First(s => s.Key == "amount").Value;
+            var orderInfo = collection.First(s => s.Key == "orderInfo").Value;
+            var orderId = collection.First(s => s.Key == "orderId").Value;
+            return new MomoExecuteResponseModel()
             {
-                partnerCode = query["partnerCode"],
-                orderId = query["orderId"],
-                requestId = query["requestId"],
-                amount = long.Parse(query["amount"]),
-                orderInfo = query["orderInfo"],
-                orderType = query["orderType"],
-                transId = long.Parse(query["transId"]),
-                resultCode = int.Parse(query["resultCode"]),
-                message = query["message"],
-                signature = query["signature"]
+                Amount = amount,
+                OrderId = orderId,
+                OrderInfo = orderInfo
             };
-            return callback;
         }
 
-        private string ComputeHmacSha256(string message, string key)
+        private string ComputeHmacSha256(string message, string secretKey)
         {
-            var keyBytes = Encoding.UTF8.GetBytes(key);
+            var keyBytes = Encoding.UTF8.GetBytes(secretKey);
+            var messageBytes = Encoding.UTF8.GetBytes(message);
+
+            byte[] hashBytes;
             using (var hmac = new HMACSHA256(keyBytes))
             {
-                var messageBytes = Encoding.UTF8.GetBytes(message);
-                var hash = hmac.ComputeHash(messageBytes);
-                return BitConverter.ToString(hash).Replace("-", "").ToLower();
+                hashBytes = hmac.ComputeHash(messageBytes);
             }
+
+            var hashString = BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
+            return hashString;
         }
     }
 }

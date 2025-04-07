@@ -1,4 +1,4 @@
-﻿namespace ShoeShopWebsite.Models
+﻿namespace ShoeShopWebsite.Models.Vnpay
 {
     public class VNPayRequest
     {

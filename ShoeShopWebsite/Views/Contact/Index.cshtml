@@ -1,0 +1,216 @@
+﻿@model dynamic
+@{
+    ViewData["Title"] = "Liên hệ";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container contact-container">
+    <h1>Liên hệ với chúng tôi</h1>
+    <p class="intro">Chúng tôi luôn sẵn sàng hỗ trợ bạn. Vui lòng điền thông tin dưới đây hoặc liên hệ trực tiếp qua các kênh sau.</p>
+
+    <div class="contact-content">
+        <!-- Thông tin liên hệ -->
+        <div class="contact-info">
+            <h2>Thông tin liên hệ</h2>
+            <ul>
+                <li><strong>Địa chỉ:</strong> 123 Đường Giày Đẹp, Quận 1, TP. HCM</li>
+                <li><strong>Email:</strong> <a href="mailto:support@shoeshop.vn">support@shoeshop.vn</a></li>
+                <li><strong>Số điện thoại:</strong> <a href="tel:+84987654321">+84 987 654 321</a></li>
+                <li><strong>Giờ làm việc:</strong> 9:00 - 17:00, Thứ 2 - Thứ 7</li>
+            </ul>
+        </div>
+
+        <!-- Biểu mẫu liên hệ -->
+        <div class="contact-form">
+            <h2>Gửi tin nhắn</h2>
+            <form id="contactForm" method="post" action="/Contact/Submit">
+                <div class="form-group">
+                    <label for="name">Họ và tên</label>
+                    <input type="text" id="name" name="name" placeholder="Nhập họ và tên" required />
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="Nhập email" required />
+                </div>
+                <div class="form-group">
+                    <label for="phone">Số điện thoại</label>
+                    <input type="tel" id="phone" name="phone" placeholder="Nhập số điện thoại" />
+                </div>
+                <div class="form-group">
+                    <label for="message">Tin nhắn</label>
+                    <textarea id="message" name="message" placeholder="Nhập tin nhắn của bạn" rows="5" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-submit">Gửi</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .contact-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            font-size: 28px;
+            color: #333333;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #E0E0E0;
+            padding-bottom: 10px;
+        }
+
+        .intro {
+            font-size: 16px;
+            color: #666666;
+            margin-bottom: 20px;
+        }
+
+        .contact-content {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .contact-info {
+            flex: 1;
+            min-width: 300px;
+            background-color: #F9F9F9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #E0E0E0;
+        }
+
+            .contact-info h2 {
+                font-size: 20px;
+                color: #333333;
+                margin-bottom: 15px;
+            }
+
+            .contact-info ul {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+
+            .contact-info li {
+                font-size: 16px;
+                color: #666666;
+                margin-bottom: 10px;
+            }
+
+                .contact-info li strong {
+                    color: #333333;
+                    font-weight: 600;
+                }
+
+            .contact-info a {
+                color: #2196F3;
+                text-decoration: none;
+                transition: color 0.3s ease;
+            }
+
+                .contact-info a:hover {
+                    color: #1976D2;
+                }
+
+        .contact-form {
+            flex: 2;
+            min-width: 300px;
+            background-color: #F9F9F9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #E0E0E0;
+        }
+
+            .contact-form h2 {
+                font-size: 20px;
+                color: #333333;
+                margin-bottom: 15px;
+            }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+            .form-group label {
+                display: block;
+                font-size: 14px;
+                color: #666666;
+                margin-bottom: 5px;
+            }
+
+            .form-group input,
+            .form-group textarea {
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #E0E0E0;
+                border-radius: 4px;
+                font-size: 14px;
+                color: #333333;
+                background-color: #FFFFFF;
+                transition: border-color 0.3s ease;
+            }
+
+                .form-group input:focus,
+                .form-group textarea:focus {
+                    border-color: #2196F3;
+                    outline: none;
+                }
+
+            .form-group textarea {
+                resize: vertical;
+            }
+
+        .btn-submit {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #2196F3;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+            .btn-submit:hover {
+                background-color: #1976D2;
+            }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#contactForm').on('submit', function (e) {
+                e.preventDefault(); // Ngăn gửi form mặc định để kiểm tra
+
+                const form = $(this);
+                const url = form.attr('action');
+
+                $.ajax({
+                    type: 'POST',
+                    url: url,
+                    data: form.serialize(),
+                    success: function (response) {
+                        if (response.success) {
+                            showToast('Tin nhắn của bạn đã được gửi thành công!', true);
+                            form[0].reset(); // Xóa dữ liệu form sau khi gửi thành công
+                        } else {
+                            showToast(response.message || 'Có lỗi xảy ra khi gửi tin nhắn!', false);
+                        }
+                    },
+                    error: function () {
+                        showToast('Đã xảy ra lỗi khi gửi tin nhắn!', false);
+                    }
+                });
+            });
+        });
+    </script>
+}
