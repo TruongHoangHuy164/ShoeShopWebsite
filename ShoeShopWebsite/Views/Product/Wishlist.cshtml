@@ -90,7 +90,7 @@
         }
     </div>
 </div>
-    
+
 <div id="toastContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 1050;"></div>
 
 <style>
@@ -121,16 +121,34 @@
 </style>
 
 @section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> <!-- Thêm jQuery -->
     <script>
+        // Hàm hiển thị toast
+        function showToast(message, isSuccess) {
+            const toast = $('<div class="toast align-items-center text-white ' + (isSuccess ? 'bg-success' : 'bg-danger') + ' border-0" role="alert" aria-live="assertive" aria-atomic="true">' +
+                '<div class="d-flex">' +
+                '<div class="toast-body">' + message + '</div>' +
+                '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>' +
+                '</div>' +
+                '</div>');
+            $('#toastContainer').append(toast);
+            toast.toast({ delay: 3000 });
+            toast.toast('show');
+            toast.on('hidden.bs.toast', function () {
+                $(this).remove();
+            });
+        }
+
         $(document).ready(function () {
-            // Thêm vào giỏ hàng từ wishlist
-            $('.add-to-cart').on('click', function () {
+            // Thêm vào giỏ hàng
+            $(document).on('click', '.add-to-cart', function () {
                 const productId = $(this).data('id');
                 const $row = $(this).closest('tr');
                 const sizeId = $row.find('.size-select').val();
-                const colorId = $row.find('.color-select').val(); // Lấy giá trị colorId
-                const quantity = $row.find('.quantity-input').val();
+                const colorId = $row.find('.color-select').val();
+                const quantity = parseInt($row.find('.quantity-input').val(), 10);
 
+                // Kiểm tra dữ liệu đầu vào
                 if (!sizeId) {
                     showToast('Vui lòng chọn kích thước!', false);
                     return;
@@ -139,7 +157,7 @@
                     showToast('Vui lòng chọn màu sắc!', false);
                     return;
                 }
-                if (quantity <= 0) {
+                if (isNaN(quantity) || quantity <= 0) {
                     showToast('Số lượng phải lớn hơn 0!', false);
                     return;
                 }
@@ -150,30 +168,30 @@
                     data: {
                         productId: productId,
                         sizeId: sizeId,
-                        colorId: colorId, // Thêm colorId vào data
+                        colorId: colorId,
                         quantity: quantity,
                         __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
                     },
                     success: function (response) {
                         if (response.success) {
-                            showToast('Đã thêm vào giỏ hàng thành công!', true); // Thông báo cố định
+                            showToast('Đã thêm vào giỏ hàng thành công!', true);
                             if (response.cartCount !== undefined) {
                                 $('#cartCount').text(`Cart (${response.cartCount})`);
                             }
                             $(document).trigger('cart-updated');
                         } else {
-                            showToast(response.message, false);
+                            showToast(response.message || 'Không thể thêm vào giỏ hàng!', false);
                         }
                     },
                     error: function (xhr, status, error) {
-                        console.log('Lỗi AJAX AddToCart:', xhr.status, xhr.responseText);
-                        showToast('Đã có lỗi xảy ra: ' + error, false);
+                        console.error('Lỗi AJAX AddToCart:', xhr.status, xhr.responseText);
+                        showToast('Đã xảy ra lỗi: ' + (xhr.responseText || error), false);
                     }
                 });
             });
 
             // Xóa khỏi wishlist
-            $('.remove-from-wishlist').on('click', function () {
+            $(document).on('click', '.remove-from-wishlist', function () {
                 const productId = $(this).data('id');
                 const $row = $(this).closest('tr');
 
@@ -186,36 +204,24 @@
                     },
                     success: function (response) {
                         if (response.success) {
-                            $row.remove();
-                            showToast(response.message, true);
+                            $row.fadeOut(300, function () {
+                                $(this).remove();
+                                if ($('.wishlist-item').length === 0) {
+                                    window.location.reload();
+                                }
+                            });
+                            showToast(response.message || 'Đã xóa khỏi danh sách yêu thích!', true);
                             $(document).trigger('wishlist-updated');
-                            if ($('.wishlist-item').length === 0) {
-                                window.location.reload();
-                            }
                         } else {
-                            showToast(response.message, false);
+                            showToast(response.message || 'Không thể xóa!', false);
                         }
                     },
                     error: function (xhr, status, error) {
-                        showToast('Đã có lỗi xảy ra: ' + error, false);
+                        console.error('Lỗi AJAX ToggleWishlist:', xhr.status, xhr.responseText);
+                        showToast('Đã xảy ra lỗi: ' + (xhr.responseText || error), false);
                     }
                 });
             });
-
-            // Hàm cập nhật số lượng giỏ hàng (dự phòng)
-            function updateCartCount() {
-                $.ajax({
-                    url: '@Url.Action("GetCartCount", "Cart")',
-                    type: 'GET',
-                    success: function (count) {
-                        $('#cartCount').text(`Cart (${count})`);
-                    },
-                    error: function (xhr, status, error) {
-                        console.log('Lỗi AJAX GetCartCount:', xhr.status, xhr.responseText);
-                        $('#cartCount').text('Cart (0)');
-                    }
-                });
-            }
         });
     </script>
 }

@@ -1,0 +1,9 @@
+﻿@page
+@model ShoeShopWebsite.Areas.Identity.Pages.Account.ExternalLoginModel
+@{
+    ViewData["Title"] = "Xác thực bên ngoài";
+}
+
+<h1>@ViewData["Title"]</h1>
+<p>Đang xử lý đăng nhập từ @Model.Input?.Email...</p>
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>

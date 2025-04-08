@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ShoeShopWebsite.Models;
 using ShoeShopWebsite.Services;
@@ -40,12 +42,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<NikeShopDbContext>();
 
 
-//builder.Services.AddAuthorization(options =>
-//{
-//    options.AddPolicy("AdminOnly", policy => policy.RequireRole(SD.Role_Admin));
-//    options.AddPolicy("EmployeeOnly", policy => policy.RequireRole(SD.Role_Employee));
-//    options.AddPolicy("CustomerOnly", policy => policy.RequireRole(SD.Role_Customer));
-//});
+
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Identity/Account/Login";
@@ -53,6 +50,16 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Identity/Account/AccessDenied";
 });
 
+builder.Services.AddAuthentication()
+    .AddGoogle(googleOptions =>
+    {
+        var googleAuthNSection = builder.Configuration.GetSection("Authentication:Google");
+        googleOptions.ClientId = googleAuthNSection["ClientId"];
+        googleOptions.ClientSecret = googleAuthNSection["ClientSecret"];
+        googleOptions.CallbackPath = "/signin-google";
+        googleOptions.SignInScheme = IdentityConstants.ExternalScheme;
+
+    });
 // Thêm IHttpContextAccessor
 builder.Services.AddHttpContextAccessor();
 
@@ -98,5 +105,11 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.MapRazorPages();
+
+// 🌐 Route đăng nhập Google
+app.MapGet("/signin-google", async (HttpContext context) =>
+{
+    await context.ChallengeAsync(GoogleDefaults.AuthenticationScheme);
+});
 
 app.Run();

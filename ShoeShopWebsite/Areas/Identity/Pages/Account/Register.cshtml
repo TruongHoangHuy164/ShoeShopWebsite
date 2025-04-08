@@ -6,83 +6,173 @@
     Layout = null;
 }
 
-<link rel="stylesheet" href="~/css/login.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" />
 <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet" />
 
 <div class="container">
     <!-- Register Form -->
     <div class="form-box">
-        <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+        <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post" autocomplete="off">
             <h1>Đăng ký</h1>
             <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
             <div class="input-box">
-                <input asp-for="Input.FullName" class="form-control" autocomplete="fullname" aria-required="true" placeholder="Họ và tên" />
+                <input asp-for="Input.FullName" class="form-control" autocomplete="off" aria-required="true" placeholder="Họ và tên" />
                 <i class="bx bxs-user"></i>
                 <span asp-validation-for="Input.FullName" class="text-danger"></span>
             </div>
             <div class="input-box">
-                <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="Email" />
+                <input asp-for="Input.Email" class="form-control" autocomplete="off" aria-required="true" placeholder="Email" />
                 <i class="bx bxs-envelope"></i>
                 <span asp-validation-for="Input.Email" class="text-danger"></span>
             </div>
             <div class="input-box">
-                <input asp-for="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="Mật khẩu" />
+                <input asp-for="Input.Password" class="form-control" autocomplete="off" aria-required="true" placeholder="Mật khẩu" />
                 <i class="bx bxs-lock-alt"></i>
                 <span asp-validation-for="Input.Password" class="text-danger"></span>
             </div>
             <div class="input-box">
-                <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="Xác nhận mật khẩu" />
+                <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="off" aria-required="true" placeholder="Xác nhận mật khẩu" />
                 <i class="bx bxs-lock-alt"></i>
                 <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
             </div>
-            @* <div class="input-box"> *@
-            @*     <select asp-for="Input.Role" asp-items="@Model.Input.RoleList" class="form-control"> *@
-            @*         <option disabled selected>Chọn vai trò</option> *@
-            @*     </select> *@
-            @*     <i class="bx bxs-group"></i> *@
-            @* </div> *@
-            <button id="registerSubmit" type="submit" class="btn">Đăng ký</button>
-            <p>hoặc đăng ký bằng</p>
-            <div class="social-icons">
-                @if (Model.ExternalLogins?.Count > 0)
-                {
-                    <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post">
-                        @foreach (var provider in Model.ExternalLogins)
-                        {
-                            if (provider.Name == "Google")
-                            {
-                                <button type="submit" name="provider" value="@provider.Name" class="social-btn"><i class="bx bxl-google"></i></button>
-                            }
-                            else if (provider.Name == "Facebook")
-                            {
-                                <button type="submit" name="provider" value="@provider.Name" class="social-btn"><i class="bx bxl-facebook"></i></button>
-                            }
-                        }
-                    </form>
-                }
-            </div>
+            <button id="registerSubmit" type="submit" class="btn btn-primary">Đăng ký</button>
         </form>
     </div>
 
-    <!-- Toggle Panels -->
+    <!-- Toggle Panel -->
     <div class="toggle-box">
         <div class="toggle-panel toggle-left">
             <h1>Xin chào!</h1>
-            <h4>Đăng Kí Tại Đây</h4>
-            <p style="padding-top:35px; margin-bottom: 0;">Đã có tài khoản?</p>
+            <h4>Đăng Ký Tại Đây</h4>
+            <p>Đã có tài khoản?</p>
             <div class="login-link">
                 <a asp-page="./Login" class="btn login-btn">Đăng Nhập</a>
             </div>
-        </div>
-        <div class="toggle-panel toggle-right">
-            <h1>Chào mừng!</h1>
-            <p>Chưa có tài khoản?</p>
-            <button type="button" class="btn register-btn" id="register-toggle">Đăng Ký</button>
         </div>
     </div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script src="~/js/login.js"></script>
 }
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Poppins', sans-serif;
+    }
+
+    .container {
+        display: flex;
+        min-height: 100vh;
+        background: #fff;
+    }
+
+    .form-box {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 40px;
+        background: #fff;
+    }
+
+        .form-box h1 {
+            font-size: 36px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+    .input-box {
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+        .input-box input {
+            width: 100%;
+            padding: 12px 40px 12px 15px;
+            font-size: 16px;
+            border: none;
+            border-radius: 25px;
+            background: #f0f4f8;
+            outline: none;
+        }
+
+        .input-box i {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            color: #666;
+        }
+
+    .btn-primary {
+        width: 100%;
+        padding: 12px;
+        background: #FF6F61;
+        border: none;
+        border-radius: 25px;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+
+        .btn-primary:hover {
+            background: #e65b50;
+        }
+
+    .toggle-box {
+        flex: 1;
+        background: #F5C6A5;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-top-left-radius: 50px;
+        border-bottom-left-radius: 50px;
+    }
+
+    .toggle-panel {
+        text-align: center;
+        color: #fff;
+    }
+
+        .toggle-panel h1 {
+            font-size: 36px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .toggle-panel h4 {
+            font-size: 20px;
+            font-weight: 400;
+            margin-bottom: 20px;
+        }
+
+        .toggle-panel p {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+    .login-btn {
+        padding: 10px 30px;
+        background: transparent;
+        border: 2px solid #fff;
+        border-radius: 25px;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: background 0.3s;
+    }
+
+        .login-btn:hover {
+            background: #fff;
+            color: #F5C6A5;
+        }
+</style>

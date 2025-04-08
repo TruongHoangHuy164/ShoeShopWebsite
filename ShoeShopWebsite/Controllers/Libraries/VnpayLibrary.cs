@@ -5,7 +5,7 @@ using System.Text;
 using System.Security.Cryptography;
 using System.Globalization;
 
-namespace ShoeShopWebsite.Libraries
+namespace ShoeShopWebsite.Controllers.Libraries
 {
     public class VnpayLibrary
     {
