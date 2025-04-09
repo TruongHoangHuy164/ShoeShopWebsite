@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using ShoeShopWebsite.Models;
 using ShoeShopWebsite.Services;
 using ShoeShopWebsite.Services.VnPay;
+using ShoeShopWebsite.Hubs;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -65,6 +66,8 @@ builder.Services.AddAuthentication()
 // Thêm IHttpContextAccessor
 builder.Services.AddHttpContextAccessor();
 
+
+
 // Thêm IHttpClientFactory
 builder.Services.AddHttpClient();
 
@@ -73,6 +76,8 @@ builder.Services.AddRazorPages();
 
 // Cấu hình dịch vụ VNPay
 builder.Services.AddScoped<IVNPayService, VnPayService>();
+
+builder.Services.AddSignalR();
 
 // Thêm dịch vụ MoMo và VNPay
 var app = builder.Build();
@@ -93,7 +98,7 @@ app.UseSession();
 app.UseCookiePolicy();
 app.UseAuthentication();
 app.UseAuthorization();
-
+app.MapHub<ChatHub>("/chatHub"); 
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapControllerRoute(
