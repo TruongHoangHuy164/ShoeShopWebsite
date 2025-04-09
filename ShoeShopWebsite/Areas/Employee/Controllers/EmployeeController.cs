@@ -1,4 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+using System.IO;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +15,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+
 
 namespace ShoeShopWebsite.Controllers
 {
@@ -544,5 +552,175 @@ namespace ShoeShopWebsite.Controllers
                 await _context.SaveChangesAsync();
             }
         }
+        // GET: /Employee/ExportOrderToPdf/{id}
+[HttpGet]
+    [Route("ExportOrderToPdf/{id}")]
+    public async Task<IActionResult> ExportOrderToPdf(int id)
+    {
+        // Thiết lập giấy phép QuestPDF
+        QuestPDF.Settings.License = LicenseType.Community;
+
+        var order = await _context.Orders
+            .Include(o => o.OrderDetails).ThenInclude(od => od.Product)
+            .Include(o => o.OrderDetails).ThenInclude(od => od.Size)
+            .Include(o => o.OrderDetails).ThenInclude(od => od.Color)
+            .FirstOrDefaultAsync(o => o.OrderID == id);
+
+        if (order == null)
+        {
+            TempData["ErrorMessage"] = "Không tìm thấy đơn hàng.";
+            return RedirectToAction(nameof(Dashboard));
+        }
+
+        try
+        {
+            // Tạo PDF với QuestPDF
+            var document = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4);
+                    page.Margin(30); // 30 points ~ 1 cm
+                    page.DefaultTextStyle(x => x.FontSize(12).FontFamily(Fonts.TimesNewRoman));
+
+                    // Header
+                    page.Header()
+                        .Text("HÓA ĐƠN BÁN HÀNG")
+                        .FontSize(20)
+                        .Bold()
+                        .AlignCenter();
+
+                    page.Content()
+                        .PaddingVertical(30)
+                        .Column(column =>
+                        {
+                            // Mã đơn hàng
+                            column.Item()
+                                .Text($"Mã đơn hàng: #{order.OrderID}")
+                                .FontSize(12)
+                                .AlignCenter();
+
+                            // Thông tin khách hàng
+                            column.Item()
+                                .PaddingTop(20)
+                                .Text("Thông tin khách hàng")
+                                .FontSize(14)
+                                .Bold();
+
+                            column.Item()
+                                .PaddingTop(5)
+                                .Table(table =>
+                                {
+                                    table.ColumnsDefinition(columns =>
+                                    {
+                                        columns.ConstantColumn(150);
+                                        columns.RelativeColumn();
+                                    });
+
+                                    table.Cell().Text("Tên khách hàng:").Bold();
+                                    table.Cell().Text(order.FullName ?? "Không xác định");
+
+                                    table.Cell().Text("Địa chỉ:").Bold();
+                                    table.Cell().Text(order.Address ?? "Không xác định");
+
+                                    table.Cell().Text("Số điện thoại:").Bold();
+                                    table.Cell().Text(order.PhoneNumber ?? "Không xác định");
+
+                                    table.Cell().Text("Ngày đặt:").Bold();
+                                    table.Cell().Text($"{order.OrderDate:dd/MM/yyyy}");
+
+                                    table.Cell().Text("Phương thức thanh toán:").Bold();
+                                    table.Cell().Text(order.PaymentMethod ?? "Không xác định");
+
+                                    table.Cell().Text("Trạng thái:").Bold();
+                                    table.Cell().Text(order.Status ?? "Không xác định");
+                                });
+
+                            // Chi tiết sản phẩm
+                            column.Item()
+                                .PaddingTop(20)
+                                .Text("Chi tiết sản phẩm")
+                                .FontSize(14)
+                                .Bold();
+
+                            column.Item()
+                                .PaddingTop(5)
+                                .Table(table =>
+                                {
+                                    table.ColumnsDefinition(columns =>
+                                    {
+                                        columns.RelativeColumn();
+                                        columns.ConstantColumn(80);
+                                        columns.ConstantColumn(80);
+                                        columns.ConstantColumn(80);
+                                        columns.ConstantColumn(100);
+                                    });
+
+                                    // Header bảng
+                                    table.Header(header =>
+                                    {
+                                        header.Cell().Background(Colors.Grey.Lighten3).Padding(5).Text("Tên sản phẩm").Bold();
+                                        header.Cell().Background(Colors.Grey.Lighten3).Padding(5).Text("Kích cỡ").Bold();
+                                        header.Cell().Background(Colors.Grey.Lighten3).Padding(5).Text("Màu sắc").Bold();
+                                        header.Cell().Background(Colors.Grey.Lighten3).Padding(5).Text("Số lượng").Bold();
+                                        header.Cell().Background(Colors.Grey.Lighten3).Padding(5).Text("Giá").Bold();
+                                    });
+
+                                    // Dữ liệu sản phẩm
+                                    if (order.OrderDetails != null && order.OrderDetails.Any())
+                                    {
+                                        foreach (var detail in order.OrderDetails)
+                                        {
+                                            table.Cell().Padding(5).Text(detail.Product?.ProductName ?? "Không xác định");
+                                            table.Cell().Padding(5).Text(detail.Size?.SizeName ?? "Không xác định");
+                                            table.Cell().Padding(5).Text(detail.Color?.ColorName ?? "Không xác định");
+                                            table.Cell().Padding(5).Text(detail.Quantity.ToString());
+                                            table.Cell().Padding(5).Text($"{detail.Price:N0} VNĐ");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        table.Cell().ColumnSpan(5).Padding(5).Text("Không có sản phẩm trong đơn hàng.");
+                                    }
+                                });
+
+                            // Tổng tiền
+                            column.Item()
+                                .PaddingTop(20)
+                                .AlignRight()
+                                .Text($"Tổng tiền: {order.TotalPrice:N0} VNĐ")
+                                .FontSize(14)
+                                .Bold();
+                        });
+
+                    // Footer
+                    page.Footer()
+                        .AlignCenter()
+                        .Text(x =>
+                        {
+                            x.Span("Trang ");
+                            x.CurrentPageNumber();
+                            x.Span(" / ");
+                            x.TotalPages();
+                        });
+                });
+            });
+
+            // Tạo file PDF và trả về
+            byte[] pdfBytes = document.GeneratePdf();
+            return File(pdfBytes, "application/pdf", $"HoaDon_{order.OrderID}.pdf");
+        }
+        catch (Exception ex)
+        {
+            // Ghi log chi tiết lỗi
+            Console.WriteLine($"Lỗi khi tạo PDF: {ex.Message}\nStackTrace: {ex.StackTrace}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+            }
+            TempData["ErrorMessage"] = $"Lỗi khi xuất hóa đơn: {ex.Message}";
+            return RedirectToAction(nameof(OrderDetails), new { id });
+        }
     }
+}
 }

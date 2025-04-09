@@ -91,14 +91,12 @@ namespace ShoeShopWebsite.Controllers
                     return RedirectToAction("Index");
                 }
 
-                // Kiểm tra ModelState trước để tận dụng validation từ CheckoutViewModel
                 if (!ModelState.IsValid)
                 {
                     model.CartItems = cartItems;
                     return View("Index", model);
                 }
 
-                // Kiểm tra PhoneNumber (dự phòng nếu validation bị bỏ qua)
                 if (string.IsNullOrEmpty(model.PhoneNumber))
                 {
                     ModelState.AddModelError("PhoneNumber", "Số điện thoại là bắt buộc.");
@@ -128,9 +126,9 @@ namespace ShoeShopWebsite.Controllers
                 var order = new Order
                 {
                     SessionId = sessionId,
-                    FullName = model.FullName, // Đã được kiểm tra bởi ModelState
+                    FullName = model.FullName,
                     Address = fullAddress,
-                    PhoneNumber = model.PhoneNumber, // Đã kiểm tra null
+                    PhoneNumber = model.PhoneNumber,
                     Note = model.Note ?? "",
                     TotalPrice = cartItems.Sum(c => c.Product.Price * c.Quantity),
                     OrderDate = DateTime.Now,
@@ -272,24 +270,28 @@ namespace ShoeShopWebsite.Controllers
         }
 
         [HttpGet]
-        public IActionResult OrderConfirmation(int orderId)
+        public async Task<IActionResult> OrderConfirmation(int orderId)
         {
-            var order = _context.Orders
+            // Lấy thông tin khách hàng từ session hoặc thông tin đăng nhập
+            var sessionId = GetSessionId();
+
+            // Tìm đơn hàng theo ID và kiểm tra xem đơn hàng có thuộc về session này không
+            var order = await _context.Orders
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Product)
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Size)
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Color)
-                .FirstOrDefault(o => o.OrderID == orderId);
+                .FirstOrDefaultAsync(o => o.OrderID == orderId && o.SessionId == sessionId);
 
             if (order == null)
             {
-                TempData["ErrorMessage"] = "Không tìm thấy đơn hàng.";
+                TempData["ErrorMessage"] = "Không tìm thấy đơn hàng hoặc bạn không có quyền xem đơn hàng này.";
                 return RedirectToAction("Index", "Home");
             }
 
-            return View(order);
+            return View("~/Views/Checkout/OrderConfirmation.cshtml", order);
         }
 
         [HttpGet]
@@ -333,6 +335,25 @@ namespace ShoeShopWebsite.Controllers
 
             HttpContext.Session.Remove("PendingOrderId");
             return RedirectToAction("OrderConfirmation", new { orderId = order.OrderID });
+        }
+        [HttpGet]
+        [Route("MyOrders")]
+        public async Task<IActionResult> MyOrders()
+        {
+            var sessionId = GetSessionId();
+            var orders = await _context.Orders
+                .Where(o => o.SessionId == sessionId)
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync();
+            return View("~/Views/Checkout/MyOrders.cshtml", orders);
+        }
+        [HttpGet]
+        public async Task<IActionResult> GetOrderCount()
+        {
+            var sessionId = GetSessionId();
+            var count = await _context.Orders
+                .CountAsync(o => o.SessionId == sessionId);
+            return Json(count);
         }
     }
 }

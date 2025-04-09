@@ -1,56 +1,179 @@
 ﻿@model ShoeShopWebsite.Models.Order
-
 @{
     ViewData["Title"] = "Xác nhận đơn hàng - ShoeShopWebsite";
 }
 
 <div class="container mt-5">
-    <h2 class="mb-4">Đơn hàng của bạn đã được đặt thành công!</h2>
-    <div class="alert alert-success">
-        Cảm ơn bạn đã mua sắm tại ShoeShopWebsite. Đơn hàng của bạn đang được xử lý.
-    </div>
-
-    <h4>Thông tin đơn hàng #@Model.OrderID</h4>
-    <p><strong>Ngày đặt hàng:</strong> @Model.OrderDate.ToString("dd/MM/yyyy HH:mm")</p>
-    <p><strong>Tên người nhận:</strong> @Model.FullName</p>
-    <p><strong>Địa chỉ giao hàng:</strong> @Model.Address</p>
-    <p><strong>Số điện thoại:</strong> @Model.PhoneNumber</p>
-    <p><strong>Phương thức thanh toán:</strong> @Model.PaymentMethod</p>
-    @if (!string.IsNullOrEmpty(Model.Note))
+    @if (Model == null)
     {
-        <p><strong>Ghi chú:</strong> @Model.Note</p>
+        <h2 class="mb-4">Không tìm thấy đơn hàng</h2>
+        <div class="alert alert-danger">
+            Đơn hàng không tồn tại hoặc bạn không có quyền xem đơn hàng này.
+        </div>
+        <div class="text-end">
+            <a asp-controller="Home" asp-action="Index" class="btn btn-primary">Quay lại trang chủ</a>
+        </div>
     }
+    else
+    {
+        <h2 class="mb-4">Đơn hàng của bạn đã được đặt thành công!</h2>
+        <div class="alert alert-success">
+            Cảm ơn bạn đã mua sắm tại ShoeShopWebsite. Đơn hàng của bạn đang được xử lý.
+        </div>
 
-    <h4>Chi tiết đơn hàng</h4>
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>Sản phẩm</th>
-                <th>Số lượng</th>
-                <th>Giá</th>
-                <th>Tổng</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var detail in Model.OrderDetails)
-            {
+        <!-- Hiển thị thông báo từ TempData -->
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+        }
+
+        <h4>Thông tin đơn hàng #@Model.OrderID</h4>
+        <div class="info-card">
+            <ul class="list-unstyled">
+                <li><strong>Ngày đặt hàng:</strong> @Model.OrderDate.ToString("dd/MM/yyyy HH:mm")</li>
+                <li><strong>Tên người nhận:</strong> @Model.FullName</li>
+                <li><strong>Địa chỉ giao hàng:</strong> @Model.Address</li>
+                <li><strong>Số điện thoại:</strong> @Model.PhoneNumber</li>
+                <li><strong>Phương thức thanh toán:</strong> @Model.PaymentMethod</li>
+                @if (!string.IsNullOrEmpty(Model.Note))
+                {
+                    <li><strong>Ghi chú:</strong> @Model.Note</li>
+                }
+                <li>
+                    <strong>Trạng thái:</strong>
+                    <span class="status @Model.Status.ToLower()">@Model.Status</span>
+                </li>
+            </ul>
+        </div>
+
+        <h4>Chi tiết đơn hàng</h4>
+        <table class="table table-bordered">
+            <thead>
                 <tr>
-                    <td>@detail.Product.ProductName (Size: @detail.Size.SizeName@(detail.Color != null ? ", Color: " + detail.Color.ColorName : ""))</td>
-                    <td>@detail.Quantity</td>
-                    <td>@detail.Price.ToString("N0") đ</td>
-                    <td>@((detail.Price * detail.Quantity).ToString("N0")) đ</td>
+                    <th>Sản phẩm</th>
+                    <th>Kích cỡ</th>
+                    <th>Màu sắc</th>
+                    <th>Số lượng</th>
+                    <th>Giá</th>
+                    <th>Tổng</th>
                 </tr>
-            }
-        </tbody>
-        <tfoot>
-            <tr>
-                <td colspan="3" class="text-end"><strong>Tổng cộng:</strong></td>
-                <td><strong>@Model.TotalPrice.ToString("N0") đ</strong></td>
-            </tr>
-        </tfoot>
-    </table>
+            </thead>
+            <tbody>
+                @if (Model.OrderDetails != null && Model.OrderDetails.Any())
+                {
+                    @foreach (var detail in Model.OrderDetails)
+                    {
+                        <tr>
+                            <td>@(detail.Product?.ProductName ?? "Không xác định")</td>
+                            <td>@(detail.Size?.SizeName ?? "Không xác định")</td>
+                            <td>@(detail.Color?.ColorName ?? "Không xác định")</td>
+                            <td>@detail.Quantity</td>
+                            <td>@detail.Price.ToString("N0") đ</td>
+                            <td>@((detail.Price * detail.Quantity).ToString("N0")) đ</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6">Không có sản phẩm trong đơn hàng.</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="5" class="text-end"><strong>Tổng cộng:</strong></td>
+                    <td><strong>@Model.TotalPrice.ToString("N0") đ</strong></td>
+                </tr>
+            </tfoot>
+        </table>
 
-    <div class="text-end">
-        <a asp-controller="Home" asp-action="Index" class="btn btn-primary">Tiếp tục mua sắm</a>
-    </div>
+        <div class="text-end">
+            <a asp-controller="Home" asp-action="Index" class="btn btn-primary">Tiếp tục mua sắm</a>
+        </div>
+    }
 </div>
+
+@section Styles {
+    <style>
+        .info-card {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            margin-bottom: 20px;
+        }
+
+            .info-card ul {
+                margin: 0;
+            }
+
+            .info-card li {
+                font-size: 16px;
+                margin-bottom: 10px;
+                color: #666666;
+            }
+
+                .info-card li strong {
+                    color: #333333;
+                    font-weight: 600;
+                    margin-right: 5px;
+                }
+
+        .status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+            .status.pending {
+                background-color: #FFF3E0;
+                color: #FF9800;
+            }
+
+            .status.confirmed {
+                background-color: #E3F2FD;
+                color: #2196F3;
+            }
+
+            .status.delivering {
+                background-color: #F3E5F5;
+                color: #9C27B0;
+            }
+
+            .status.completed {
+                background-color: #E8F5E9;
+                color: #4CAF50;
+            }
+
+            .status.failed {
+                background-color: #FFEBEE;
+                color: #F44336;
+            }
+
+        .table th, .table td {
+            vertical-align: middle;
+        }
+
+        .table th {
+            background-color: #f5f5f5;
+            color: #666666;
+            font-weight: 600;
+        }
+
+        .alert-success {
+            background-color: #E8F5E9;
+            color: #4CAF50;
+        }
+
+        .alert-danger {
+            background-color: #FFEBEE;
+            color: #F44336;
+        }
+    </style>
+}

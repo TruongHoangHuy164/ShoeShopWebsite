@@ -26,7 +26,7 @@
     </div>
 
     <!-- Loading overlay -->
-    <div class="loading-overlay" id="loadingOverlay Ress">
+    <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
     </div>
 
@@ -72,6 +72,10 @@
                     </ul>
                 </div>
                 <div class="d-flex align-items-center">
+                    <a class="nav-link text-dark me-4 position-relative" asp-controller="Checkout" asp-action="MyOrders">
+                        <i class="bi bi-box-seam fs-5"></i>
+                        <span id="orderCount" class="order-count position-absolute top-0 start-100 translate-middle badge rounded-pill bg-dark">0</span>
+                    </a>
                     <a class="nav-link text-dark me-4 position-relative" asp-controller="Cart" asp-action="Index">
                         <i class="bi bi-cart fs-5"></i>
                         <span id="cartCount" class="cart-count position-absolute top-0 start-100 translate-middle badge rounded-pill bg-dark">0</span>
@@ -138,6 +142,7 @@
         $(document).ready(function () {
             updateCartCount();
             updateWishlistCount();
+            updateOrderCount();
 
             function showToast(message, isSuccess = true) {
                 const toast = $('#notificationToast');
@@ -171,8 +176,17 @@
                 });
             }
 
+            function updateOrderCount() {
+                $.get('@Url.Action("GetOrderCount", "Checkout")', function (count) {
+                    $('#orderCount').text(count);
+                }).fail(function () {
+                    $('#orderCount').text('0');
+                });
+            }
+
             $(document).on('cart-updated', updateCartCount);
             $(document).on('wishlist-updated', updateWishlistCount);
+            $(document).on('order-updated', updateOrderCount);
         });
     </script>
     @Html.AntiForgeryToken()
@@ -195,43 +209,43 @@
         font-weight: 600;
     }
 
-    .navbar-nav .nav-link:hover {
-        color: #fff !important;
-        background-color: rgba(255, 255, 255, 0.2);
-    }
+        .navbar-nav .nav-link:hover {
+            color: #fff !important;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
 
-    .navbar-nav .nav-link::after {
-        content: '';
-        position: absolute;
-        width: 0;
-        height: 2px;
-        bottom: 0;
-        left: 50%;
-        background-color: #fff;
-        transition: all 0.3s ease;
-        transform: translateX(-50%);
-    }
+        .navbar-nav .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: 0;
+            left: 50%;
+            background-color: #fff;
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
 
-    .navbar-nav .nav-link:hover::after {
-        width: 50%;
-    }
+        .navbar-nav .nav-link:hover::after {
+            width: 50%;
+        }
 
     .admin-dashboard-link {
         font-weight: bold;
         background-color: rgba(255, 255, 255, 0.1);
     }
 
-    .admin-dashboard-link:hover {
-        background-color: rgba(255, 255, 255, 0.3);
-    }
+        .admin-dashboard-link:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
 
     .employee-dashboard-link {
         background-color: rgba(255, 255, 255, 0.05);
     }
 
-    .employee-dashboard-link:hover {
-        background-color: rgba(255, 255, 255, 0.2);
-    }
+        .employee-dashboard-link:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
 
     .navbar-brand:hover img {
         transform: scale(1.1);
@@ -241,7 +255,7 @@
         filter: invert(20%);
     }
 
-    .cart-count, .wishlist-count {
+    .cart-count, .wishlist-count, .order-count {
         font-size: 12px;
         padding: 2px 6px;
     }
@@ -262,18 +276,18 @@
         transition: color 0.3s ease;
     }
 
-    .hover-link:hover {
-        color: #FFBD71 !important;
-    }
+        .hover-link:hover {
+            color: #FFBD71 !important;
+        }
 
     .hover-icon {
         transition: transform 0.3s ease, color 0.3s ease;
     }
 
-    .hover-icon:hover {
-        transform: scale(1.2);
-        color: #FFBD71;
-    }
+        .hover-icon:hover {
+            transform: scale(1.2);
+            color: #FFBD71;
+        }
 
     /* Loading Overlay */
     .loading-overlay {
@@ -300,8 +314,13 @@
     }
 
     @@keyframes spin {
-        0% { transform: translate(-50%, -50%) rotate(0deg); }
-        100% { transform: translate(-50%, -50%) rotate(360deg); }
+        0% {
+            transform: translate(-50%, -50%) rotate(0deg);
+        }
+
+        100% {
+            transform: translate(-50%, -50%) rotate(360deg);
+        }
     }
 
     /* Product Card */
@@ -314,49 +333,49 @@
         background: #fff;
     }
 
-    .product-card:hover {
-        transform: translateY(-10px);
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-    }
+        .product-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
 
-    .product-card img {
-        width: 100%;
-        height: 250px;
-        object-fit: cover;
-        transition: transform 0.5s ease;
-    }
+        .product-card img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
 
-    .product-card:hover img {
-        transform: scale(1.05);
-    }
+        .product-card:hover img {
+            transform: scale(1.05);
+        }
 
-    .product-card .card-body {
-        padding: 15px;
-        text-align: center;
-    }
+        .product-card .card-body {
+            padding: 15px;
+            text-align: center;
+        }
 
-    .product-card .card-title {
-        font-size: 1.2rem;
-        font-weight: 600;
-        margin-bottom: 10px;
-        color: #333;
-    }
+        .product-card .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
 
-    .product-card .card-text {
-        font-size: 1rem;
-        color: #666;
-    }
+        .product-card .card-text {
+            font-size: 1rem;
+            color: #666;
+        }
 
-    .product-card .btn {
-        background: #000;
-        color: #fff;
-        border-radius: 50px;
-        padding: 8px 20px;
-        transition: background 0.3s ease;
-    }
+        .product-card .btn {
+            background: #000;
+            color: #fff;
+            border-radius: 50px;
+            padding: 8px 20px;
+            transition: background 0.3s ease;
+        }
 
-    .product-card .btn:hover {
-        background: #FFBD71;
-        color: #000;
-    }
+            .product-card .btn:hover {
+                background: #FFBD71;
+                color: #000;
+            }
 </style>

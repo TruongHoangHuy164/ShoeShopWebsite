@@ -1,0 +1,110 @@
+﻿@model List<ShoeShopWebsite.Models.Order>
+@{
+    ViewData["Title"] = "Danh sách đơn hàng - ShoeShopWebsite";
+}
+
+<div class="container mt-5">
+    <h2 class="mb-4">Danh sách đơn hàng của bạn</h2>
+
+    @if (Model.Any())
+    {
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Mã đơn hàng</th>
+                    <th>Ngày đặt</th>
+                    <th>Tổng tiền</th>
+                    <th>Phương thức thanh toán</th>
+                    <th>Trạng thái</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in Model)
+                {
+                    <tr>
+                        <td>#@order.OrderID</td>
+                        <td>@order.OrderDate.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>@order.TotalPrice.ToString("N0") đ</td>
+                        <td>@order.PaymentMethod</td>
+                        <td><span class="status @order.Status.ToLower()">@order.Status</span></td>
+                        <td>
+                            <a asp-action="OrderConfirmation" asp-route-orderId="@order.OrderID" class="btn btn-primary btn-sm">Xem chi tiết</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            Bạn chưa có đơn hàng nào.
+        </div>
+    }
+
+    <div class="text-end">
+        <a asp-controller="Home" asp-action="Index" class="btn btn-primary">Tiếp tục mua sắm</a>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .container {
+            max-width: 1200px;
+        }
+
+        .table th, .table td {
+            vertical-align: middle;
+            padding: 12px;
+        }
+
+        .table th {
+            background-color: #f5f5f5;
+            color: #666666;
+            font-weight: 600;
+        }
+
+        .status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+            .status.pending {
+                background-color: #FFF3E0;
+                color: #FF9800;
+            }
+
+            .status.confirmed {
+                background-color: #E3F2FD;
+                color: #2196F3;
+            }
+
+            .status.delivering {
+                background-color: #F3E5F5;
+                color: #9C27B0;
+            }
+
+            .status.completed {
+                background-color: #E8F5E9;
+                color: #4CAF50;
+            }
+
+            .status.failed {
+                background-color: #FFEBEE;
+                color: #F44336;
+            }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+
+        .alert-info {
+            background-color: #E3F2FD;
+            color: #2196F3;
+        }
+    </style>
+}

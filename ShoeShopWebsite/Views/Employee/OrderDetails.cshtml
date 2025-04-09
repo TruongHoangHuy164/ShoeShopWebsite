@@ -68,10 +68,23 @@
                 </table>
             </div>
         </div>
+
+        <!-- Nút hành động -->
         <div class="form-actions">
             <a href="/Employee/UpdateOrderStatus/@Model.OrderID" class="btn btn-update">Cập nhật trạng thái</a>
+            <a href="/Employee/ExportOrderToPdf/@Model.OrderID" class="btn btn-export">Xuất hóa đơn PDF</a>
             <a href="/Employee/Dashboard" class="btn btn-back">Quay lại Dashboard</a>
         </div>
+
+        <!-- Hiển thị thông báo -->
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+        }
     }
 </div>
 
@@ -185,6 +198,7 @@
             display: flex;
             gap: 10px;
             margin-top: 20px;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -193,6 +207,7 @@
             border-radius: 4px;
             font-size: 14px;
             transition: background-color 0.3s ease;
+            text-align: center;
         }
 
         .btn-update {
@@ -204,6 +219,15 @@
                 background-color: #555555;
             }
 
+        .btn-export {
+            background-color: #4CAF50;
+            color: #FFFFFF;
+        }
+
+            .btn-export:hover {
+                background-color: #45A049;
+            }
+
         .btn-back {
             background-color: #E0E0E0;
             color: #333333;
@@ -212,5 +236,22 @@
             .btn-back:hover {
                 background-color: #D0D0D0;
             }
+
+        .alert {
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background-color: #E8F5E9;
+            color: #4CAF50;
+        }
+
+        .alert-danger {
+            background-color: #FFEBEE;
+            color: #F44336;
+        }
     </style>
 }
