@@ -14,6 +14,8 @@ builder.Services.AddScoped<IMomoService, MomoService>();
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+builder.Services.AddScoped<IEmailService, EmailService>();
+
 // Cấu hình Session
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
