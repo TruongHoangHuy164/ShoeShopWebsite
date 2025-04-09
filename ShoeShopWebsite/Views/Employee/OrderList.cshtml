@@ -1,0 +1,258 @@
+﻿@model IEnumerable<dynamic>
+@{
+    ViewData["Title"] = "Danh sách đơn hàng";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>Danh sách đơn hàng</h1>
+        <div class="header-actions">
+            <a href="/Employee/Dashboard" class="btn btn-action">Quay lại Dashboard</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Khách hàng</th>
+                        <th>Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày đặt</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in Model)
+                    {
+                        <tr>
+                            <td>@order.OrderID</td>
+                            <td>@order.FullName</td>
+                            <td>@order.TotalPrice.ToString("N0") VNĐ</td>
+                            <td>
+                                <span class="@(order.Status == "Pending" ? "status-pending" : order.Status == "Confirmed" ? "status-confirmed" : order.Status == "Delivering" ? "status-delivering" : "status-completed")">
+                                    @order.Status
+                                </span>
+                            </td>
+                            <td>@order.OrderDate.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                <a href="/Employee/OrderDetails/@order.OrderID" class="btn btn-view">Xem</a>
+                                @if (order.Status == "Pending")
+                                {
+                                    <a href="#" class="btn btn-confirm" onclick="confirmOrder(@order.OrderID); return false;">Xác nhận</a>
+                                }
+                                @if (order.Status == "Confirmed")
+                                {
+                                    <a href="#" class="btn btn-deliver" onclick="deliverOrder(@order.OrderID); return false;">Giao hàng</a>
+                                }
+                                <a href="/Employee/ExportOrderToPdf/@order.OrderID" class="btn btn-view">Xuất PDF</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .dashboard-container {
+            max-width: 1300px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Header */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+            .dashboard-header h1 {
+                font-size: 26px;
+                color: #2c3e50;
+                margin: 0;
+            }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-action {
+            padding: 8px 16px;
+            background: #3498db;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: background 0.3s ease;
+        }
+
+            .btn-action:hover {
+                background: #2980b9;
+            }
+
+        /* Section */
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+        }
+
+            .data-table th,
+            .data-table td {
+                padding: 12px 15px;
+                text-align: left;
+                border-bottom: 1px solid #ecf0f1;
+            }
+
+            .data-table th {
+                background: #f1f3f5;
+                font-weight: 600;
+                color: #2c3e50;
+            }
+
+            .data-table tr:hover {
+                background: #f9fbfc;
+                transition: background 0.2s ease;
+            }
+
+        /* Nút hành động */
+        .btn {
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 13px;
+            transition: background 0.3s ease;
+            margin-right: 5px;
+        }
+
+        .btn-view {
+            background: #bdc3c7;
+            color: #fff;
+        }
+
+            .btn-view:hover {
+                background: #95a5a6;
+            }
+
+        .btn-confirm {
+            background: #e67e22;
+            color: #fff;
+        }
+
+            .btn-confirm:hover {
+                background: #d35400;
+            }
+
+        .btn-deliver {
+            background: #8e44ad;
+            color: #fff;
+        }
+
+            .btn-deliver:hover {
+                background: #6c3483;
+            }
+
+        /* Trạng thái */
+        .status {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-pending {
+            background: #fce4d6;
+            color: #e67e22;
+        }
+
+        .status-confirmed {
+            background: #d6eaf8;
+            color: #2980b9;
+        }
+
+        .status-delivering {
+            background: #e8d6f5;
+            color: #8e44ad;
+        }
+
+        .status-completed {
+            background: #d4efdf;
+            color: #27ae60;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Xác nhận đơn hàng
+            window.confirmOrder = function (orderId) {
+                if (confirm('Bạn có chắc muốn xác nhận đơn hàng này?')) {
+                    showLoading();
+                    fetch(`/Employee/ConfirmOrder/${orderId}`, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': '@Html.AntiForgeryToken().ToString()' }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        hideLoading();
+                        showToast(data.message, data.success);
+                        if (data.success) location.reload();
+                    })
+                    .catch(error => {
+                        hideLoading();
+                        showToast('Lỗi khi xác nhận đơn hàng!', false);
+                        console.error('Error:', error);
+                    });
+                }
+            };
+
+            // Giao hàng
+            window.deliverOrder = function (orderId) {
+                if (confirm('Bạn có chắc muốn bắt đầu giao hàng?')) {
+                    showLoading();
+                    fetch(`/Employee/DeliverOrder/${orderId}`, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': '@Html.AntiForgeryToken().ToString()' }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        hideLoading();
+                        showToast(data.message, data.success);
+                        if (data.success) location.reload();
+                    })
+                    .catch(error => {
+                        hideLoading();
+                        showToast('Lỗi khi bắt đầu giao hàng!', false);
+                        console.error('Error:', error);
+                    });
+                }
+            };
+        });
+    </script>
+}

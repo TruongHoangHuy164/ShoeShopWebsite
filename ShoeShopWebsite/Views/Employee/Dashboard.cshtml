@@ -4,269 +4,304 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container dashboard-container">
-    <div class="header">
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
         <h1>Dashboard Nhân viên</h1>
-        <p>Xin chào, @User.Identity.Name | Ngày: @DateTime.Now.ToString("dd/MM/yyyy")</p>
-        <a href="ProductList" class="btn btn-product-list">Hiển thị danh sách sản phẩm</a>
+        <div class="user-info">
+            <span>Xin chào, @User.Identity.Name</span>
+            <span>Ngày: @DateTime.Now.ToString("dd/MM/yyyy")</span>
+        </div>
+        <div class="header-actions">
+            <a href="/Employee/ProductList" class="btn btn-action">Danh sách sản phẩm</a>
+            <a href="/Employee/OrderList" class="btn btn-action">Danh sách đơn hàng</a>
+        </div>
     </div>
 
-    <div class="stats">
-        <div class="stat-card pending">
+    <!-- Thống kê -->
+    <div class="stats-grid">
+        <div class="stat-card" data-type="pending">
             <h3>Đơn hàng chờ xử lý</h3>
             <p id="pendingOrders">0</p>
         </div>
-        <div class="stat-card delivering">
+        <div class="stat-card" data-type="delivering">
             <h3>Đơn hàng đang giao</h3>
             <p id="deliveringOrders">0</p>
         </div>
-        <div class="stat-card low-stock">
+        <div class="stat-card" data-type="low-stock">
             <h3>Sản phẩm sắp hết hàng</h3>
             <p id="lowStockProducts">0</p>
         </div>
     </div>
 
-    <div class="section recent-orders">
-        <h2>Đơn hàng gần đây</h2>
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Khách hàng</th>
-                    <th>Tổng tiền</th>
-                    <th>Trạng thái</th>
-                    <th>Hành động</th>
-                </tr>
-            </thead>
-            <tbody id="orderList"></tbody>
-        </table>
+    <!-- Đơn hàng gần đây -->
+    <div class="section">
+        <div class="section-header">
+            <h2>Đơn hàng gần đây</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Khách hàng</th>
+                        <th>Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="orderList"></tbody>
+            </table>
+        </div>
     </div>
 
-    <div class="section low-stock-products">
-        <h2>Sản phẩm tồn kho thấp</h2>
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Tên sản phẩm</th>
-                    <th>Tồn kho</th>
-                    <th>Hành động</th>
-                </tr>
-            </thead>
-            <tbody id="productList"></tbody>
-        </table>
+    <!-- Sản phẩm tồn kho thấp -->
+    <div class="section">
+        <div class="section-header">
+            <h2>Sản phẩm tồn kho thấp</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tên sản phẩm</th>
+                        <th>Tồn kho</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="productList"></tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 @section Styles {
     <style>
         .dashboard-container {
-            max-width: 1200px;
-            margin: 20px auto;
+            max-width: 1300px;
+            margin: 30px auto;
             padding: 20px;
-            background-color: #FFFFFF;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
         }
 
-        .header {
-            background-color: #F9F9F9;
-            padding: 10px 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
+        /* Header */
+        .dashboard-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 25px;
             flex-wrap: wrap;
+            gap: 15px;
         }
 
-            .header h1 {
-                font-size: 28px;
-                color: #333333;
-                margin-bottom: 5px;
-            }
-
-            .header p {
-                font-size: 14px;
-                color: #999999;
+            .dashboard-header h1 {
+                font-size: 26px;
+                color: #2c3e50;
                 margin: 0;
             }
 
-        .stats {
+        .user-info {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+            .user-info span {
+                margin-right: 15px;
+            }
+
+        .header-actions {
             display: flex;
+            gap: 10px;
+        }
+
+        .btn-action {
+            padding: 8px 16px;
+            background: #3498db;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: background 0.3s ease;
+        }
+
+            .btn-action:hover {
+                background: #2980b9;
+            }
+
+        /* Thống kê */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
-            margin: 20px 0;
+            margin-bottom: 30px;
         }
 
         .stat-card {
-            flex: 1;
             padding: 20px;
             border-radius: 8px;
             text-align: center;
-            border: 1px solid #E0E0E0;
-            transition: box-shadow 0.3s ease, transform 0.2s ease;
+            background: #fff;
+            border: 1px solid #ecf0f1;
+            transition: transform 0.2s ease, box-shadow 0.3s ease;
         }
 
             .stat-card:hover {
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-                transform: translateY(-2px);
+                transform: translateY(-5px);
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
             }
 
             .stat-card h3 {
                 font-size: 16px;
-                color: #666666;
-                margin: 0 0 10px 0;
+                color: #7f8c8d;
+                margin-bottom: 10px;
             }
 
             .stat-card p {
-                font-size: 24px;
-                color: #333333;
-                font-weight: bold;
+                font-size: 28px;
+                font-weight: 700;
                 margin: 0;
             }
 
-            .stat-card.pending {
-                background-color: #FFF8F0;
-                border-left: 4px solid #FFCC80;
+            .stat-card[data-type="pending"] {
+                border-left: 5px solid #f39c12;
+                color: #f39c12;
             }
 
-            .stat-card.delivering {
-                background-color: #F6F0FA;
-                border-left: 4px solid #CE93D8;
+            .stat-card[data-type="delivering"] {
+                border-left: 5px solid #8e44ad;
+                color: #8e44ad;
             }
 
-            .stat-card.low-stock {
-                background-color: #F5F9F5;
-                border-left: 4px solid #A5D6A7;
+            .stat-card[data-type="low-stock"] {
+                border-left: 5px solid #27ae60;
+                color: #27ae60;
             }
 
+        /* Section */
         .section {
-            margin-bottom: 30px;
+            margin-bottom: 40px;
         }
 
-            .section h2 {
+        .section-header {
+            margin-bottom: 15px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+
+            .section-header h2 {
                 font-size: 20px;
-                color: #333333;
-                margin-bottom: 15px;
-                padding-bottom: 5px;
-                border-bottom: 2px solid #E0E0E0;
+                color: #2c3e50;
+                margin: 0;
             }
 
-        .recent-orders h2 {
-            border-bottom-color: #FFCC80;
+        /* Bảng */
+        .table-responsive {
+            overflow-x: auto;
         }
 
-        .low-stock-products h2 {
-            border-bottom-color: #A5D6A7;
-        }
-
-        .table {
+        .data-table {
             width: 100%;
             border-collapse: collapse;
+            background: #fff;
         }
 
-            .table th, .table td {
-                padding: 12px;
-                border-bottom: 1px solid #E0E0E0;
-                color: #666666;
+            .data-table th,
+            .data-table td {
+                padding: 12px 15px;
                 text-align: left;
+                border-bottom: 1px solid #ecf0f1;
             }
 
-            .table th {
-                background-color: #F5F5F5;
-                color: #666666;
+            .data-table th {
+                background: #f1f3f5;
                 font-weight: 600;
+                color: #2c3e50;
             }
 
-            .table tr:hover {
-                background-color: #FAFAFA;
-                transition: background-color 0.2s ease;
+            .data-table tr:hover {
+                background: #f9fbfc;
+                transition: background 0.2s ease;
             }
 
         .size-stock {
             display: block;
             font-size: 13px;
-            margin: 2px 0;
+            margin: 3px 0;
         }
 
         .stock-critical {
-            color: #F44336;
+            color: #e74c3c;
             font-weight: bold;
         }
 
+        /* Nút hành động */
         .btn {
             padding: 6px 12px;
-            text-decoration: none;
             border-radius: 4px;
-            font-size: 14px;
-            display: inline-block;
-            margin-right: 5px;
-            transition: background-color 0.3s ease;
+            text-decoration: none;
+            font-size: 13px;
+            transition: background 0.3s ease;
         }
 
         .btn-view {
-            background-color: #E0E0E0;
-            color: #333333;
+            background: #bdc3c7;
+            color: #fff;
         }
 
             .btn-view:hover {
-                background-color: #D0D0D0;
+                background: #95a5a6;
             }
 
         .btn-confirm {
-            background-color: #666666;
-            color: #FFFFFF;
+            background: #e67e22;
+            color: #fff;
         }
 
             .btn-confirm:hover {
-                background-color: #555555;
+                background: #d35400;
             }
 
         .btn-deliver {
-            background-color: #999999;
-            color: #FFFFFF;
+            background: #8e44ad;
+            color: #fff;
         }
 
             .btn-deliver:hover {
-                background-color: #888888;
+                background: #6c3483;
             }
 
-        .btn-product-list {
-            background-color: gray;
-            color: #FFFFFF;
-            padding: 8px 16px;
-            font-size: 14px;
-        }
-
-            .btn-product-list:hover {
-                background-color: darkgray;
-            }
-
+        /* Trạng thái */
         .status {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 14px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
             font-weight: 500;
         }
 
         .status-pending {
-            background-color: #FFF3E0;
-            color: #FF9800;
+            background: #fce4d6;
+            color: #e67e22;
         }
 
         .status-confirmed {
-            background-color: #E3F2FD;
-            color: #2196F3;
+            background: #d6eaf8;
+            color: #2980b9;
         }
 
         .status-delivering {
-            background-color: #F3E5F5;
-            color: #9C27B0;
+            background: #e8d6f5;
+            color: #8e44ad;
         }
 
         .status-completed {
-            background-color: #E8F5E9;
-            color: #4CAF50;
+            background: #d4efdf;
+            color: #27ae60;
         }
     </style>
 }
@@ -278,55 +313,59 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        document.getElementById('pendingOrders').innerText = data.pendingOrders;
-                        document.getElementById('deliveringOrders').innerText = data.deliveringOrders;
-                        document.getElementById('lowStockProducts').innerText = data.lowStockProducts;
+                        $('#pendingOrders').text(data.pendingOrders);
+                        $('#deliveringOrders').text(data.deliveringOrders);
+                        $('#lowStockProducts').text(data.lowStockProducts);
 
-                        const orderTbody = document.getElementById('orderList');
+                        const orderTbody = $('#orderList');
                         data.recentOrders.forEach(o => {
                             const statusClass = o.status === 'Pending' ? 'status-pending' :
                                 o.status === 'Confirmed' ? 'status-confirmed' :
                                 o.status === 'Delivering' ? 'status-delivering' : 'status-completed';
-                            orderTbody.innerHTML += `
+                            orderTbody.append(`
                                 <tr>
                                     <td>${o.orderID}</td>
                                     <td>${o.fullName}</td>
-                                    <td>${o.totalPrice.toLocaleString()} VNĐ</td>
-                                    <td><span class="${statusClass}">${o.status}</span></td>
+                                    <td>${o.totalPrice.toLocaleString('vi-VN')} VNĐ</td>
+                                    <td><span class="status ${statusClass}">${o.status}</span></td>
                                     <td>
                                         <a href="/Employee/OrderDetails/${o.orderID}" class="btn btn-view">Xem</a>
                                         ${o.status === 'Pending' ? `<a href="#" class="btn btn-confirm" onclick="confirmOrder(${o.orderID}); return false;">Xác nhận</a>` : ''}
                                         ${o.status === 'Confirmed' ? `<a href="#" class="btn btn-deliver" onclick="deliverOrder(${o.orderID}); return false;">Giao hàng</a>` : ''}
                                     </td>
-                                </tr>`;
+                                </tr>
+                            `);
                         });
 
-                        const productTbody = document.getElementById('productList');
+                        const productTbody = $('#productList');
                         data.lowStock.forEach(p => {
-                            let sizeStockHtml = '';
-                            p.sizes.forEach(size => {
-                                const stockClass = size.stock < 10 ? 'stock-critical' : '';
-                                sizeStockHtml += `<span class="size-stock"><strong>${size.sizeName}:</strong> <span class="${stockClass}">${size.stock}</span></span>`;
-                            });
-                            productTbody.innerHTML += `
+                            let sizeStockHtml = p.sizes.map(size => `
+                                <span class="size-stock">
+                                    <strong>${size.sizeName}:</strong>
+                                    <span class="${size.stock < 10 ? 'stock-critical' : ''}">${size.stock}</span>
+                                </span>
+                            `).join('');
+                            productTbody.append(`
                                 <tr>
                                     <td>${p.productID}</td>
                                     <td>${p.productName}</td>
                                     <td>${sizeStockHtml}</td>
                                     <td><a href="/Employee/ProductDetails/${p.productID}" class="btn btn-view">Xem</a></td>
-                                </tr>`;
+                                </tr>
+                            `);
                         });
                     } else {
                         showToast(data.message, false);
                     }
                 })
                 .catch(error => {
-                    console.error('Lỗi:', error);
-                    showToast('Đã xảy ra lỗi khi tải dữ liệu!', false);
+                    console.error('Error fetching dashboard data:', error);
+                    showToast('Không thể tải dữ liệu dashboard!', false);
                 });
 
-            function confirmOrder(orderId) {
-                if (confirm('Xác nhận đơn hàng này?')) {
+            // Xác nhận đơn hàng
+            window.confirmOrder = function(orderId) {
+                if (confirm('Bạn có chắc muốn xác nhận đơn hàng này?')) {
                     showLoading();
                     fetch(`/Employee/ConfirmOrder/${orderId}`, {
                         method: 'POST',
@@ -340,14 +379,15 @@
                     })
                     .catch(error => {
                         hideLoading();
-                        showToast('Đã xảy ra lỗi khi xác nhận đơn hàng!', false);
-                        console.error('Lỗi:', error);
+                        showToast('Lỗi khi xác nhận đơn hàng!', false);
+                        console.error('Error:', error);
                     });
                 }
-            }
+            };
 
-            function deliverOrder(orderId) {
-                if (confirm('Bắt đầu giao hàng?')) {
+            // Giao hàng
+            window.deliverOrder = function(orderId) {
+                if (confirm('Bạn có chắc muốn bắt đầu giao hàng?')) {
                     showLoading();
                     fetch(`/Employee/DeliverOrder/${orderId}`, {
                         method: 'POST',
@@ -361,11 +401,11 @@
                     })
                     .catch(error => {
                         hideLoading();
-                        showToast('Đã xảy ra lỗi khi bắt đầu giao hàng!', false);
-                        console.error('Lỗi:', error);
+                        showToast('Lỗi khi bắt đầu giao hàng!', false);
+                        console.error('Error:', error);
                     });
                 }
-            }
+            };
         });
     </script>
 }
