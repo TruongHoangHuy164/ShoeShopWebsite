@@ -184,7 +184,7 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
         [HttpPost]
         [Route("EditUser/{id}")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditUser(string id, ApplicationUser user, string password, string selectedRole)
+        public async Task<IActionResult> EditUser(string id, ApplicationUser user, string selectedRole)
         {
             if (id != user.Id) return NotFound();
 
@@ -220,11 +220,11 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
                     return View("~/Views/Admin/EditUser.cshtml", user);
                 }
 
-                if (!string.IsNullOrEmpty(password))
-                {
-                    var token = await _userManager.GeneratePasswordResetTokenAsync(existingUser);
-                    await _userManager.ResetPasswordAsync(existingUser, token, password);
-                }
+                //if (!string.IsNullOrEmpty(password))
+                //{
+                //    var token = await _userManager.GeneratePasswordResetTokenAsync(existingUser);
+                //    await _userManager.ResetPasswordAsync(existingUser, token, password);
+                //}
 
                 var currentRoles = await _userManager.GetRolesAsync(existingUser);
                 await _userManager.RemoveFromRolesAsync(existingUser, currentRoles);
