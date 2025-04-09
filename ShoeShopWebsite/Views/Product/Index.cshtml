@@ -40,7 +40,7 @@
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" id="filterCategory">
-                        <option value="">Chọn danh mục</option>
+                        <option value="">Tất cả danh mục</option>
                         @foreach (var category in ViewData["Categories"] as IEnumerable<ShoeShopWebsite.Models.Category> ?? Enumerable.Empty<ShoeShopWebsite.Models.Category>())
                         {
                             @if (ViewData["FilterCategory"]?.ToString() == category.CategoryName)
@@ -57,47 +57,54 @@
             </div>
         </div>
 
-        <!-- Danh sách sản phẩm dạng grid -->
-        <div class="row product-grid" id="productList">
+        <!-- Hiển thị sản phẩm theo danh mục -->
+        <div class="product-categories">
             @if (Model != null && Model.Any())
             {
-                var productsToShow = Model.Take(8); // Lấy 8 sản phẩm (2 hàng x 4)
-                foreach (var item in productsToShow)
+                var groupedProducts = Model.GroupBy(p => p.Category?.CategoryName ?? "Không xác định");
+                foreach (var group in groupedProducts)
                 {
-                    <div class="col-md-3 col-6 mb-4 product-item"
-                         data-name="@item.ProductName"
-                         data-category="@item.Category?.CategoryName">
-                        <div class="product-card">
-                            @if (item.ProductImages != null && item.ProductImages.Any())
+                    <div class="category-section mb-5">
+                        <h4 class="category-title">@group.Key</h4>
+                        <div class="row product-grid">
+                            @foreach (var item in group) // Xóa .Take(8) để hiển thị tất cả sản phẩm trong nhóm
                             {
-                                var primaryImage = item.ProductImages.FirstOrDefault(img => img.IsPrimary) ?? item.ProductImages.First();
-                                <img src="@primaryImage.ImageURL" alt="@item.ProductName" class="product-img">
+                                <div class="col-md-3 col-6 mb-4 product-item"
+                                     data-name="@item.ProductName"
+                                     data-category="@item.Category?.CategoryName">
+                                    <div class="product-card">
+                                        @if (item.ProductImages != null && item.ProductImages.Any())
+                                        {
+                                            var primaryImage = item.ProductImages.FirstOrDefault(img => img.IsPrimary) ?? item.ProductImages.First();
+                                            <img src="@primaryImage.ImageURL" alt="@item.ProductName" class="product-img">
+                                        }
+                                        else
+                                        {
+                                            <img src="/images/no-image.png" alt="No Image" class="product-img">
+                                        }
+                                        <h5 class="product-title">@item.ProductName</h5>
+                                        <p class="product-price">@item.Price.ToString("N0") đ</p>
+                                        <div class="btn-group">
+                                            <select class="form-select form-select-sm size-select" data-id="@item.ProductID">
+                                                <option value="">Chọn size</option>
+                                                @foreach (var size in item.ProductSizes ?? Enumerable.Empty<ProductSize>())
+                                                {
+                                                    <option value="@size.SizeID">@size.Size.SizeName</option>
+                                                }
+                                            </select>
+                                            <button class="btn btn-sm btn-light add-to-cart" data-id="@item.ProductID">
+                                                <i class="fas fa-cart-plus"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-light add-to-wishlist wishlist-icon" data-id="@item.ProductID">
+                                                <i class="fas fa-heart"></i>
+                                            </button>
+                                            <a href="@Url.Action("Details", "Product", new { id = item.ProductID })" class="btn btn-sm btn-light">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
                             }
-                            else
-                            {
-                                <img src="/images/no-image.png" alt="No Image" class="product-img">
-                            }
-                            <h5 class="product-title">@item.ProductName</h5>
-                            <p class="product-price">@item.Price.ToString("N0") đ</p>
-                            <div class="btn-group">
-                                <!-- Dropdown chọn size -->
-                                <select class="form-select form-select-sm size-select" data-id="@item.ProductID">
-                                    <option value="">Chọn size</option>
-                                    @foreach (var size in item.ProductSizes ?? Enumerable.Empty<ProductSize>())
-                                    {
-                                        <option value="@size.SizeID">@size.Size.SizeName</option>
-                                    }
-                                </select>
-                                <button class="btn btn-sm btn-light add-to-cart" data-id="@item.ProductID">
-                                    <i class="fas fa-cart-plus"></i>
-                                </button>
-                                <button class="btn btn-sm btn-light add-to-wishlist wishlist-icon" data-id="@item.ProductID">
-                                    <i class="fas fa-heart"></i>
-                                </button>
-                                <a href="@Url.Action("Details", "Product", new { id = item.ProductID })" class="btn btn-sm btn-light">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                            </div>
                         </div>
                     </div>
                 }
@@ -109,12 +116,49 @@
                 </div>
             }
         </div>
+
+        <!-- Phân trang -->
+        @if (ViewData["TotalPages"] != null && (int)ViewData["TotalPages"] > 1)
+        {
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item @(ViewData["CurrentPage"] as int? == 1 ? "disabled" : "")">
+                        <a class="page-link" href="@Url.Action("Index", new { searchName = ViewData["SearchName"], sortPrice = ViewData["SortPrice"], filterCategory = ViewData["FilterCategory"], page = (int)ViewData["CurrentPage"] - 1 })">Trước</a>
+                    </li>
+                    @for (int i = 1; i <= (int)ViewData["TotalPages"]; i++)
+                    {
+                        <li class="page-item @(i == (int)ViewData["CurrentPage"] ? "active" : "")">
+                            <a class="page-link" href="@Url.Action("Index", new { searchName = ViewData["SearchName"], sortPrice = ViewData["SortPrice"], filterCategory = ViewData["FilterCategory"], page = i })">@i</a>
+                        </li>
+                    }
+                    <li class="page-item @(ViewData["CurrentPage"] as int? == (int)ViewData["TotalPages"] ? "disabled" : "")">
+                        <a class="page-link" href="@Url.Action("Index", new { searchName = ViewData["SearchName"], sortPrice = ViewData["SortPrice"], filterCategory = ViewData["FilterCategory"], page = (int)ViewData["CurrentPage"] + 1 })">Sau</a>
+                    </li>
+                </ul>
+            </nav>
+        }
     </div>
 </div>
 
 <style>
-    .product-grid {
+    .product-categories {
         padding: 20px 0;
+    }
+
+    .category-section {
+        margin-bottom: 40px;
+    }
+
+    .category-title {
+        font-size: 1.5rem;
+        color: #333;
+        border-bottom: 2px solid #28a745;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+
+    .product-grid {
+        padding: 0;
     }
 
     .product-card {
@@ -208,26 +252,23 @@
             console.log("jQuery đã sẵn sàng!");
 
             // Tìm kiếm và lọc sản phẩm qua server
-            function filterProducts() {
+            function filterProducts(page = @((int)ViewData["CurrentPage"])) {
                 const name = $('#searchName').val() || '';
                 const sortPrice = $('#sortPrice').val() || '';
                 const category = $('#filterCategory').val() || '';
 
-                console.log("Filtering with: ", { name, sortPrice, category });
+                console.log("Filtering with: ", { name, sortPrice, category, page });
 
                 window.location.href = '@Url.Action("Index", "Product")' +
                     '?searchName=' + encodeURIComponent(name) +
                     '&sortPrice=' + encodeURIComponent(sortPrice) +
-                    '&filterCategory=' + encodeURIComponent(category);
+                    '&filterCategory=' + encodeURIComponent(category) +
+                    '&page=' + page;
             }
 
             // Gắn sự kiện cho các input/select
-            $('#searchName').on('input', function () {
-                filterProducts();
-            });
-            $('#sortPrice, #filterCategory').on('change', function () {
-                filterProducts();
-            });
+            $('#searchName').on('input', function () { filterProducts(); });
+            $('#sortPrice, #filterCategory').on('change', function () { filterProducts(); });
 
             // Thêm vào giỏ hàng (CartController)
             $('.add-to-cart').on('click', function () {
@@ -301,6 +342,18 @@
             // Hiển thị toast thông báo
             function showToast(message, isSuccess) {
                 var toast = $('#notificationToast');
+                if (toast.length === 0) {
+                    $('body').append(`
+                        <div id="notificationToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                            <div class="toast-header">
+                                <strong class="me-auto">Thông báo</strong>
+                                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                            </div>
+                            <div class="toast-body"></div>
+                        </div>
+                    `);
+                    toast = $('#notificationToast');
+                }
                 toast.find('.toast-body').text(message);
                 toast.removeClass('bg-success bg-danger').addClass(isSuccess ? 'bg-success' : 'bg-danger');
                 toast.toast({ delay: 2000 });
