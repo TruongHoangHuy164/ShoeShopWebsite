@@ -1,0 +1,64 @@
+﻿@{
+    ViewData["Title"] = "Gửi email thành công";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container success-container">
+    <div class="success-message text-center">
+        <h1>Email đã gửi thành công!</h1>
+        <p>Cảm ơn bạn đã liên hệ với chúng tôi. Chúng tôi sẽ phản hồi bạn sớm nhất có thể qua email: <strong>@ViewBag.UserEmail</strong>.</p>
+        <div class="mt-4">
+            <a href="@Url.Action("Index", "Contact")" class="btn btn-primary me-2">Gửi tin nhắn khác</a>
+            <a href="@Url.Action("Index", "Home")" class="btn btn-secondary">Quay lại trang chủ</a>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .success-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .success-message h1 {
+            font-size: 28px;
+            color: #28A745;
+            margin-bottom: 15px;
+        }
+
+        .success-message p {
+            font-size: 16px;
+            color: #666666;
+            margin-bottom: 20px;
+        }
+
+        .btn-primary {
+            background-color: #2196F3;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+            .btn-primary:hover {
+                background-color: #1976D2;
+            }
+
+        .btn-secondary {
+            background-color: #6C757D;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+            .btn-secondary:hover {
+                background-color: #5A6268;
+            }
+    </style>
+}
