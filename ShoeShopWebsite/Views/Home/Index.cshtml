@@ -188,7 +188,7 @@
 </button>
 
 <!-- Cửa sổ chat -->
-<div id="chat-window" class="chat-window" style="display: none;">
+<div id="chat-window" class="chat-window">
     <div class="chat-header">
         <span>Tư vấn khách hàng</span>
         <button id="close-chat" class="btn-close btn-close-white"></button>
@@ -413,9 +413,18 @@
         border-radius: 10px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         z-index: 1000;
-        display: flex;
+        display: none;
         flex-direction: column;
+        opacity: 0;
+        transform: scale(0.9);
+        transition: opacity 0.3s ease, transform 0.3s ease;
     }
+
+        .chat-window.active {
+            display: flex;
+            opacity: 1;
+            transform: scale(1);
+        }
 
     .chat-header {
         background: #000;
@@ -526,21 +535,24 @@
                 .then(() => console.log("SignalR connected successfully"))
                 .catch(err => console.error("SignalR connection failed: ", err.toString()));
 
-            // Toggle cửa sổ chat
+            // Toggle cửa sổ chat với hiệu ứng
             $('#chat-toggle').on('click', function () {
                 if (!'@User.Identity.IsAuthenticated') {
                     showToast('Vui lòng đăng nhập để sử dụng chat!', false);
                     return;
                 }
-                $('#chat-window').toggle();
-                if ($('#chat-window').is(':visible')) {
-                    $('#chatBox').empty(); // Xóa tin nhắn cũ khi mở
+                const $chatWindow = $('#chat-window');
+                if ($chatWindow.hasClass('active')) {
+                    $chatWindow.removeClass('active');
+                } else {
+                    $chatWindow.addClass('active');
+                    $('#chatBox')[0].scrollTop = $('#chatBox')[0].scrollHeight; // Cuộn xuống cuối khi mở
                 }
             });
 
-            // Đóng cửa sổ chat
+            // Đóng cửa sổ chat với hiệu ứng
             $('#close-chat').on('click', function () {
-                $('#chat-window').hide();
+                $('#chat-window').removeClass('active');
             });
 
             // Gửi tin nhắn khi nhấn nút
