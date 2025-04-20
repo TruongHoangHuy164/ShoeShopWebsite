@@ -1,44 +1,70 @@
-﻿@model dynamic
+﻿@model ShoeShopWebsite.Models.Order
 
 @{
     ViewData["Title"] = "Thanh toán thành công";
+    Layout = "~/Views/Shared/_Layout.cshtml"; // Rõ ràng khai báo layout
 }
 
-<h2>Thanh toán thành công</h2>
+<div class="payment-container">
+    <div class="success-message">
+        <h3 class="text-success">Thanh toán thành công!</h3>
+        <p>Cảm ơn bạn đã mua sắm tại ShoeShop.</p>
+    </div>
 
-<div class="alert alert-success">
-    <strong>@ViewBag.SuccessMessage</strong>
+    @if (Model != null)
+    {
+        <div class="info-box">
+            <div>
+                <h5>Thông tin đơn hàng</h5>
+                <p><strong>Mã đơn hàng:</strong> @Model.OrderID</p>
+                <p><strong>Khách hàng:</strong> @(Model.FullName ?? "Không xác định")</p>
+                <p><strong>Số điện thoại:</strong> @(Model.PhoneNumber ?? "Không xác định")</p>
+                <p><strong>Ngày đặt hàng:</strong> @Model.OrderDate.ToString("dd/MM/yyyy HH:mm")</p>
+                <p><strong>Phương thức thanh toán:</strong> @(Model.PaymentMethod ?? "Không xác định")</p>
+            </div>
+            <p class="total-price">Tổng tiền: @String.Format("{0:N0}", Model.TotalPrice) VND</p>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-danger">
+            <p>Không tìm thấy thông tin đơn hàng.</p>
+        </div>
+    }
+
+    <a href="@Url.Action("Index", "Home")" class="btn btn-primary btn-home">Quay lại trang chủ</a>
 </div>
-
-<div class="order-details">
-    <h4>Chi tiết đơn hàng</h4>
-    <p><strong>Mã đơn hàng:</strong> @ViewBag.OrderId</p>
-    <p><strong>Số tiền:</strong> @String.Format("{0:N0}", ViewBag.Amount) VND</p>
-</div>
-
-<a href="@Url.Action("Index", "Home")" class="btn btn-primary">Quay lại trang chủ</a>
 
 <style>
-    .order-details {
+    .payment-container {
         margin-top: 20px;
-        padding: 15px;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        background-color: #f9f9f9;
+        max-width: 900px; /* Chiều rộng cho nội dung trang */
     }
 
-    .alert-success {
-        margin-top: 20px;
+    .success-message {
+        margin-bottom: 20px;
     }
 
-    .btn-primary {
-        margin-top: 20px;
-        background-color: #007bff;
-        border-color: #007bff;
+    .info-box {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        margin-bottom: 20px;
+        width: 100%;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }
 
-        .btn-primary:hover {
-            background-color: #0056b3;
-            border-color: #0056b3;
-        }
+    .total-price {
+        font-weight: bold;
+        color: #dc3545;
+    }
+
+    .btn-home {
+        margin-top: 15px;
+        width: 150px;
+    }
 </style>

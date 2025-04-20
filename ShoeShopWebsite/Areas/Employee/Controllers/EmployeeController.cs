@@ -328,7 +328,7 @@ namespace ShoeShopWebsite.Controllers
                 return RedirectToAction(nameof(Dashboard));
             }
 
-            ViewBag.Statuses = new[] { "Pending", "Confirmed", "Delivering", "Completed" };
+            ViewBag.Statuses = new[] { "Pending", "Confirmed", "Delivering", "Completed" ,"Đã thanh toán" };
             return View("~/Views/Employee/UpdateOrderStatus.cshtml", order);
         }
 
