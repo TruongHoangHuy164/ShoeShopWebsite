@@ -4,8 +4,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ShoeShopWebsite.Models;
 using ShoeShopWebsite.Services;
-using ShoeShopWebsite.Services.VnPay;
 using ShoeShopWebsite.Hubs;
+using ShoeShopWebsite.Services.NewFolder;
+using ShoeShopWebsite.Services.VnPay;
 
 
 var builder = WebApplication.CreateBuilder(args);

@@ -12,49 +12,48 @@
                 <i class="fas fa-plus me-1"></i> Thêm sản phẩm mới
             </a>
         </div>
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
-    }
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
-    }
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Tên sản phẩm</th>
-                <th>Giá</th>
-                <th>Tồn kho</th>
-                <th>Hành động</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var p in Model)
-            {
-                var sizeStockHtml = "";
-                foreach (var size in p.Sizes)
-                {
-                    var stockClass = size.Stock < 10 ? "stock-critical" : "";
-                    sizeStockHtml += $"<span class='size-stock'><strong>{size.SizeName}:</strong> <span class='{stockClass}'>{size.Stock}</span></span>";
-                }
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+        }
+        <table class="table table-bordered">
+            <thead>
                 <tr>
-                    <td>@p.ProductID</td>
-                    <td>@p.ProductName</td>
-                    <td>@p.Price.ToString("N0") VNĐ</td>
-                    <td>@Html.Raw(sizeStockHtml)</td>
-                    <td>
-                       
-                        <a href="@Url.Action("EditProduct", "Admin", new { id = p.ProductID })" class="btn btn-edit">Sửa</a>
-                        <a href="@Url.Action("DeleteProduct", "Admin", new { id = p.ProductID })" class="btn btn-delete">Xóa</a>
-                    </td>
+                    <th>ID</th>
+                    <th>Tên sản phẩm</th>
+                    <th>Giá</th>
+                    <th>Tồn kho</th>
+                    <th>Hành động</th>
                 </tr>
-            }
-        </tbody>
-    </table>
-    <a href="@Url.Action("AdminDashboard", "Admin")" class="btn btn-back">Quay lại Dashboard</a>
-</div>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    var sizeStockHtml = "";
+                    foreach (var size in p.Sizes)
+                    {
+                        var stockClass = size.Stock < 10 ? "stock-critical" : "";
+                        sizeStockHtml += $"<span class='size-stock'><strong>{size.SizeName}:</strong> <span class='{stockClass}'>{size.Stock}</span></span>";
+                    }
+                    <tr>
+                        <td>@p.ProductID</td>
+                        <td>@p.ProductName</td>
+                        <td>@p.Price.ToString("N0") VNĐ</td>
+                        <td>@Html.Raw(sizeStockHtml)</td>
+                        <td>
+                            <a href="@Url.Action("EditProduct", "Admin", new { id = p.ProductID })" class="btn btn-edit">Sửa</a>
+                            <a href="@Url.Action("DeleteProduct", "Admin", new { id = p.ProductID })" class="btn btn-delete">Xóa</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <a href="@Url.Action("AdminDashboard", "Admin")" class="btn btn-back">Quay lại Dashboard</a>
+    </div>
 
 @section Styles {
     <style>

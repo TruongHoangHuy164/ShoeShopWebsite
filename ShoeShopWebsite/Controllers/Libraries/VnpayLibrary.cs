@@ -1,9 +1,9 @@
 ﻿using System.Net.Sockets;
 using System.Net;
-using ShoeShopWebsite.Models.Vnpay;
 using System.Text;
 using System.Security.Cryptography;
 using System.Globalization;
+using ShoeShopWebsite.Models;
 
 namespace ShoeShopWebsite.Controllers.Libraries
 {

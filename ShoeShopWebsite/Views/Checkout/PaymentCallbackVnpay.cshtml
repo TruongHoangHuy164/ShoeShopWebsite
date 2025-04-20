@@ -1,0 +1,44 @@
+﻿@model dynamic
+
+@{
+    ViewData["Title"] = "Thanh toán thành công";
+}
+
+<h2>Thanh toán thành công</h2>
+
+<div class="alert alert-success">
+    <strong>@ViewBag.SuccessMessage</strong>
+</div>
+
+<div class="order-details">
+    <h4>Chi tiết đơn hàng</h4>
+    <p><strong>Mã đơn hàng:</strong> @ViewBag.OrderId</p>
+    <p><strong>Số tiền:</strong> @String.Format("{0:N0}", ViewBag.Amount) VND</p>
+</div>
+
+<a href="@Url.Action("Index", "Home")" class="btn btn-primary">Quay lại trang chủ</a>
+
+<style>
+    .order-details {
+        margin-top: 20px;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+    }
+
+    .alert-success {
+        margin-top: 20px;
+    }
+
+    .btn-primary {
+        margin-top: 20px;
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+</style>

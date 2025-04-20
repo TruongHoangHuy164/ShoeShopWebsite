@@ -372,10 +372,30 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
             }
         }
 
+        [HttpGet]
+        [Route("DeleteProduct/{id}")]
+        public async Task<IActionResult> DeleteProduct(int id)
+        {
+            var product = await _context.Products
+                .Include(p => p.ProductImages)
+                .Include(p => p.ProductSizes).ThenInclude(ps => ps.Size)
+                .Include(p => p.ProductColors).ThenInclude(pc => pc.Color)
+                .FirstOrDefaultAsync(p => p.ProductID == id);
+
+            if (product == null)
+            {
+                TempData["ErrorMessage"] = "Không tìm thấy sản phẩm.";
+                return RedirectToAction(nameof(ProductList));
+            }
+
+            return View("~/Views/Admin/DeleteProduct.cshtml", product);
+        }
+
+        // POST: /Admin/DeleteProduct/{id} - Thực hiện xóa
         [HttpPost]
         [Route("DeleteProduct/{id}")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteProduct(int id)
+        public async Task<IActionResult> DeleteProductConfirmed(int id)
         {
             try
             {
@@ -391,7 +411,17 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
                     return RedirectToAction(nameof(ProductList));
                 }
 
+                if (await _context.OrderDetails.AnyAsync(od => od.ProductID == id))
+                {
+                    TempData["ErrorMessage"] = "Không thể xóa sản phẩm vì đã tồn tại trong đơn hàng.";
+                    return RedirectToAction(nameof(ProductList));
+                }
+
+                _context.ProductImages.RemoveRange(product.ProductImages);
+                _context.ProductSizes.RemoveRange(product.ProductSizes);
+                _context.ProductColors.RemoveRange(product.ProductColors);
                 _context.Products.Remove(product);
+
                 await _context.SaveChangesAsync();
 
                 TempData["SuccessMessage"] = "Xóa sản phẩm thành công!";
@@ -404,7 +434,7 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
             }
         }
 
-      
+
 
         // --- Quản lý danh mục ---
 

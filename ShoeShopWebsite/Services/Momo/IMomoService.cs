@@ -1,7 +1,7 @@
 ﻿using ShoeShopWebsite.Models;
 using ShoeShopWebsite.Models.Momo;
 
-namespace ShoeShopWebsite.Services
+namespace ShoeShopWebsite.Services.NewFolder
 {
     public interface IMomoService
     {
