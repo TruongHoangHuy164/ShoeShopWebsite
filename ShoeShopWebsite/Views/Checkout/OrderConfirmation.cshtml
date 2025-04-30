@@ -16,6 +16,33 @@
     }
     else
     {
+        // Xác định bước hiện tại và màu sắc dựa trên trạng thái đơn hàng
+        var currentStep = 0;
+        var statusColor = "#ddd"; // Mặc định
+        switch (Model.Status.ToLower())
+        {
+            case "pending":
+                currentStep = 1;
+                statusColor = "#FF9800"; // Cam
+                break;
+            case "confirmed":
+                currentStep = 2;
+                statusColor = "#2196F3"; // Xanh dương
+                break;
+            case "delivering":
+                currentStep = 3;
+                statusColor = "#9C27B0"; // Tím
+                break;
+            case "completed":
+                currentStep = 4;
+                statusColor = "#4CAF50"; // Xanh lá
+                break;
+            case "failed":
+                currentStep = 0;
+                statusColor = "#F44336"; // Đỏ
+                break;
+        }
+
         <h2 class="mb-4">Đơn hàng của bạn đã được đặt thành công!</h2>
         <div class="alert alert-success">
             Cảm ơn bạn đã mua sắm tại ShoeShopWebsite. Đơn hàng của bạn đang được xử lý.
@@ -29,6 +56,30 @@
         @if (TempData["ErrorMessage"] != null)
         {
             <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+        }
+
+        <!-- Thanh tiến độ -->
+        <div class="progress-tracker mb-4" style="--status-color: @statusColor;">
+            <div class="step @(currentStep >= 1 ? "active" : "")">
+                <span class="step-circle"></span>
+                <span class="step-label">Chờ xác nhận</span>
+            </div>
+            <div class="step @(currentStep >= 2 ? "active" : "")">
+                <span class="step-circle"></span>
+                <span class="step-label">Đã xác nhận</span>
+            </div>
+            <div class="step @(currentStep >= 3 ? "active" : "")">
+                <span class="step-circle"></span>
+                <span class="step-label">Đang giao</span>
+            </div>
+            <div class="step @(currentStep >= 4 ? "active" : "")">
+                <span class="step-circle"></span>
+                <span class="step-label">Hoàn thành</span>
+            </div>
+        </div>
+        @if (Model.Status.ToLower() == "failed")
+        {
+            <div class="failed-text mb-4">Đơn hàng thất bại</div>
         }
 
         <h4>Thông tin đơn hàng #@Model.OrderID</h4>
@@ -174,6 +225,67 @@
         .alert-danger {
             background-color: #FFEBEE;
             color: #F44336;
+        }
+
+        /* CSS cho thanh tiến độ */
+        .progress-tracker {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            position: relative;
+            width: 100%;
+            padding: 10px 0;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .step-circle {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #ddd;
+            transition: background-color 0.3s;
+        }
+
+        .step.active .step-circle {
+            background-color: var(--status-color); /* Sử dụng màu của trạng thái */
+        }
+
+        .step-label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+            white-space: nowrap;
+        }
+
+        .step.active .step-label {
+            color: var(--status-color);
+            font-weight: 500;
+        }
+
+        .progress-tracker::before {
+            content: '';
+            position: absolute;
+            top: 18px;
+            left: 10%;
+            right: 10%;
+            height: 2px;
+            background-color: #ddd;
+            z-index: 0;
+        }
+
+        .failed-text {
+            text-align: center;
+            color: #F44336;
+            font-size: 14px;
+            margin-bottom: 10px;
         }
     </style>
 }
