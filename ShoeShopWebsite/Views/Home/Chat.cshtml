@@ -1,0 +1,146 @@
+﻿@{
+    ViewData["Title"] = "Chat Realtime";
+}
+
+<!-- Cửa sổ chat -->
+<div id="chat-window" class="chat-window">
+    <div class="chat-header">
+        <span>Tư vấn khách hàng</span>
+        <button id="close-chat" class="btn-close btn-close-white"></button>
+    </div>
+    <div id="chatBox" class="chat-messages"></div>
+    <div class="chat-input">
+        <input type="text" id="messageInput" placeholder="Nhập tin nhắn..." />
+        <button id="sendButton" class="btn nike-btn nike-btn-primary">Gửi</button>
+    </div>
+</div>
+
+<style>
+    .chat-window {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 350px;
+        height: 450px;
+        background: #fff;
+        border: 2px solid #000;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-header {
+        background: #000;
+        color: #fff;
+        padding: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        font-family: 'Arial', sans-serif;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .chat-messages {
+        flex-grow: 1;
+        padding: 15px;
+        overflow-y: auto;
+        background: #f5f5f5;
+    }
+
+    .chat-input {
+        display: flex;
+        padding: 10px;
+        border-top: 1px solid #ddd;
+        background: #fff;
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+    }
+
+        .chat-input input {
+            flex-grow: 1;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 8px;
+            margin-right: 10px;
+            font-family: 'Arial', sans-serif;
+        }
+
+    .chat-messages .message {
+        margin: 8px 0;
+        padding: 10px;
+        border-radius: 5px;
+        max-width: 80%;
+        word-wrap: break-word;
+    }
+
+        .chat-messages .message.sent {
+            background: #FF6450; /* Màu cam Nike */
+            color: #fff;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+
+        .chat-messages .message.received {
+            background: #ddd;
+            color: #000;
+            align-self: flex-start;
+        }
+</style>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Kết nối đến Hub
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/chatHub", { accessTokenFactory: () => '@User.FindFirst("access_token")?.Value' })
+                .withAutomaticReconnect()
+                .build();
+
+            // Nhận tin nhắn từ server
+            connection.on("ReceiveMessage", (user, message) => {
+                const currentUser = '@User.Identity.Name';
+                const isSent = user === currentUser;
+                const messageClass = isSent ? 'sent' : 'received';
+                const msg = `<div class="message ${messageClass}">${user}: ${message}</div>`;
+                $('#chatBox').append(msg);
+                $('#chatBox')[0].scrollTop = $('#chatBox')[0].scrollHeight;
+            });
+
+            // Bắt đầu kết nối
+            connection.start()
+                .then(() => console.log("SignalR connected successfully"))
+                .catch(err => console.error("SignalR connection failed: ", err.toString()));
+
+            // Gửi tin nhắn khi nhấn nút
+            $('#sendButton').on('click', function () {
+                const message = $('#messageInput').val().trim();
+                if (message) {
+                    connection.invoke("SendMessage", message)
+                        .then(() => {
+                            console.log("Message sent:", message);
+                            $('#messageInput').val('');
+                        })
+                        .catch(err => console.error("Send failed: ", err.toString()));
+                }
+            });
+
+            // Gửi tin nhắn khi nhấn Enter
+            $('#messageInput').on('keypress', function (e) {
+                if (e.key === "Enter") {
+                    $('#sendButton').click();
+                }
+            });
+
+            // Đóng cửa sổ chat
+            $('#close-chat').on('click', function () {
+                $('#chat-window').hide();
+            });
+        });
+    </script>
+}

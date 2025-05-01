@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ShoeShopWebsite.Models;
 using ShoeShopWebsite.Services;
+using ShoeShopWebsite.Hubs;
+using ShoeShopWebsite.Services.NewFolder;
 using ShoeShopWebsite.Services.VnPay;
 
 
@@ -13,7 +15,13 @@ builder.Services.AddScoped<IMomoService, MomoService>();
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+//<<<<<<< Hoang
 builder.Services.AddAntiforgery();
+//=======
+
+builder.Services.AddScoped<IEmailService, EmailService>();
+
+//>>>>>>> master
 // Cấu hình Session
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
@@ -63,6 +71,8 @@ builder.Services.AddAuthentication()
 // Thêm IHttpContextAccessor
 builder.Services.AddHttpContextAccessor();
 
+
+
 // Thêm IHttpClientFactory
 builder.Services.AddHttpClient();
 
@@ -71,6 +81,8 @@ builder.Services.AddRazorPages();
 
 // Cấu hình dịch vụ VNPay
 builder.Services.AddScoped<IVNPayService, VnPayService>();
+
+builder.Services.AddSignalR();
 
 // Thêm dịch vụ MoMo và VNPay
 var app = builder.Build();
@@ -91,7 +103,7 @@ app.UseSession();
 app.UseCookiePolicy();
 app.UseAuthentication();
 app.UseAuthorization();
-
+app.MapHub<ChatHub>("/chatHub"); 
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapControllerRoute(

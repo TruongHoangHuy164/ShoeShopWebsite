@@ -22,7 +22,7 @@ namespace ShoeShopWebsite.Controllers
         }
 
         // GET: Product/Index
-        public async Task<IActionResult> Index(string searchName, string sortPrice, string filterCategory)
+        public async Task<IActionResult> Index(string searchName, string sortPrice, string filterCategory, int page = 1, int pageSize = 20)
         {
             var productsQuery = _context.Products
                 .Include(p => p.Category)
@@ -53,17 +53,28 @@ namespace ShoeShopWebsite.Controllers
                     productsQuery = productsQuery.OrderByDescending(p => p.Price);
                     break;
                 default:
-                    productsQuery = productsQuery.OrderBy(p => p.ProductID); // Mặc định sắp xếp theo ProductID
+                    productsQuery = productsQuery.OrderBy(p => p.ProductID);
                     break;
             }
 
-            var products = await productsQuery.Take(8).ToListAsync();
+            // Tính tổng số sản phẩm
+            int totalProducts = await productsQuery.CountAsync();
+            int totalPages = (int)Math.Ceiling(totalProducts / (double)pageSize);
+
+            // Lấy sản phẩm cho trang hiện tại
+            var products = await productsQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
 
             // Lưu dữ liệu để hiển thị lại trong view
             ViewData["SearchName"] = searchName;
             ViewData["SortPrice"] = sortPrice;
             ViewData["FilterCategory"] = filterCategory;
             ViewData["Categories"] = await _context.Categories.ToListAsync();
+            ViewData["CurrentPage"] = page;
+            ViewData["TotalPages"] = totalPages;
+            ViewData["PageSize"] = pageSize;
 
             return View(products);
         }

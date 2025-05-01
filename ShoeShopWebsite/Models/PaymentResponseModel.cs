@@ -1,4 +1,4 @@
-﻿namespace ShoeShopWebsite.Models.Vnpay
+﻿namespace ShoeShopWebsite.Models
 {
     public class PaymentResponseModel
     {
@@ -10,6 +10,7 @@
         public bool Success { get; set; }
         public string Token { get; set; }
         public string VnPayResponseCode { get; set; }
+        public string Message { get; set; }
 
     }
 }

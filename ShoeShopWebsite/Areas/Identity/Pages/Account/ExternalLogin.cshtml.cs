@@ -13,15 +13,18 @@ namespace ShoeShopWebsite.Areas.Identity.Pages.Account
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager; // Thêm RoleManager
         private readonly ILogger<ExternalLoginModel> _logger;
 
         public ExternalLoginModel(
             SignInManager<ApplicationUser> signInManager,
             UserManager<ApplicationUser> userManager,
+            RoleManager<IdentityRole> roleManager, // Thêm dependency
             ILogger<ExternalLoginModel> logger)
         {
             _signInManager = signInManager;
             _userManager = userManager;
+            _roleManager = roleManager; // Khởi tạo
             _logger = logger;
         }
 
@@ -93,9 +96,18 @@ namespace ShoeShopWebsite.Areas.Identity.Pages.Account
                 var createResult = await _userManager.CreateAsync(user);
                 if (createResult.Succeeded)
                 {
+                    // Gán vai trò "Customer" mặc định
+                    const string defaultRole = "Customer";
+                    if (!await _roleManager.RoleExistsAsync(defaultRole))
+                    {
+                        await _roleManager.CreateAsync(new IdentityRole(defaultRole));
+                    }
+                    await _userManager.AddToRoleAsync(user, defaultRole);
+
+                    // Liên kết thông tin đăng nhập Google
                     await _userManager.AddLoginAsync(user, info);
                     await _signInManager.SignInAsync(user, isPersistent: false);
-                    _logger.LogInformation("Tạo và đăng nhập tài khoản mới bằng Google.");
+                    _logger.LogInformation("Tạo, gán vai trò Customer và đăng nhập tài khoản mới bằng Google.");
                     return LocalRedirect(ReturnUrl);
                 }
                 foreach (var error in createResult.Errors)

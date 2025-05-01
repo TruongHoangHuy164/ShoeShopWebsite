@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ShoeShopWebsite.Services
+namespace ShoeShopWebsite.Services.NewFolder
 {
     public class MomoService : IMomoService
     {
@@ -51,7 +51,7 @@ namespace ShoeShopWebsite.Services
                 orderInfo = model.OrderInfo,
                 requestId = model.OrderId,
                 extraData = "",
-                signature = signature
+                signature
             };
 
             request.AddParameter("application/json", JsonConvert.SerializeObject(requestData), ParameterType.RequestBody);

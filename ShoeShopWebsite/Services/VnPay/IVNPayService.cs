@@ -5,7 +5,7 @@ namespace ShoeShopWebsite.Services.VnPay
 {
     public interface IVNPayService
     {
-        string CreatePaymentUrl(PaymentInformationModel model, HttpContext context);
+        string CreatePaymentUrl(PaymentInformationModel paymentInfo, HttpContext context);
         PaymentResponseModel PaymentExecute(IQueryCollection collections);
 
 

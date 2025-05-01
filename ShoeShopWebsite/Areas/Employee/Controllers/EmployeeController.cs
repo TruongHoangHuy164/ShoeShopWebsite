@@ -328,7 +328,7 @@ namespace ShoeShopWebsite.Controllers
                 return RedirectToAction(nameof(Dashboard));
             }
 
-            ViewBag.Statuses = new[] { "Pending", "Confirmed", "Delivering", "Completed" };
+            ViewBag.Statuses = new[] { "Pending", "Confirmed", "Delivering", "Completed" ,"Đã thanh toán" };
             return View("~/Views/Employee/UpdateOrderStatus.cshtml", order);
         }
 
@@ -722,5 +722,32 @@ namespace ShoeShopWebsite.Controllers
             return RedirectToAction(nameof(OrderDetails), new { id });
         }
     }
-}
+        // GET: /Employee/OrderList
+        [HttpGet]
+        [Route("OrderList")]
+        public async Task<IActionResult> OrderList()
+        {
+            try
+            {
+                var orders = await _context.Orders
+                    .OrderByDescending(o => o.OrderDate)
+                    .Select(o => new
+                    {
+                        OrderID = o.OrderID,
+                        FullName = o.FullName,
+                        TotalPrice = o.TotalPrice,
+                        Status = o.Status,
+                        OrderDate = o.OrderDate
+                    })
+                    .ToListAsync();
+
+                return View("~/Views/Employee/OrderList.cshtml", orders);
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Lỗi khi tải danh sách đơn hàng: {ex.Message}";
+                return RedirectToAction(nameof(Dashboard));
+            }
+        }
+    }
 }

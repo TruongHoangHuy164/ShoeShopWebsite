@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ShoeShopWebsite.Models;
@@ -44,11 +45,22 @@ namespace ShoeShopWebsite.Controllers
             Console.WriteLine($"CartIdentifier determined: {sessionId}");
             return sessionId;
         }
+
         [HttpPost]
         public async Task<IActionResult> AddToCart(int productId, int sizeId, int? colorId = null, int quantity = 1)
         {
             try
             {
+                if (!User.Identity.IsAuthenticated)
+                {
+                    return Json(new { success = false, message = "Chưa đăng nhập, vui lòng đăng nhập!" });
+                }
+
+                if (!User.IsInRole(SD.Role_Customer))
+                {
+                    return Json(new { success = false, message = "Bạn không có quyền truy cập chức năng này!" });
+                }
+
                 Console.WriteLine($"AddToCart started - ProductID: {productId}, SizeID: {sizeId}, ColorID: {colorId}, Quantity: {quantity}");
 
                 var product = await _context.Products
@@ -92,7 +104,7 @@ namespace ShoeShopWebsite.Controllers
                     {
                         ProductID = productId,
                         SizeID = sizeId,
-                        ColorID = colorId, // Mặc định là null nếu không gửi từ client
+                        ColorID = colorId,
                         Quantity = quantity,
                         SessionId = cartIdentifier
                     };
@@ -133,6 +145,16 @@ namespace ShoeShopWebsite.Controllers
         {
             try
             {
+                if (!User.Identity.IsAuthenticated)
+                {
+                    return Json(new { success = false, message = "Chưa đăng nhập, vui lòng đăng nhập!" });
+                }
+
+                if (!User.IsInRole(SD.Role_Customer))
+                {
+                    return Json(new { success = false, message = "Bạn không có quyền truy cập chức năng này!" });
+                }
+
                 var cartIdentifier = GetCartIdentifier();
                 Console.WriteLine($"Index - CartIdentifier: {cartIdentifier}");
 
@@ -156,7 +178,7 @@ namespace ShoeShopWebsite.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in Index: {ex.Message}\nStackTrace: {ex.StackTrace}");
-                return StatusCode(500, $"Lỗi: {ex.Message}");
+                return Json(new { success = false, message = "Đã có lỗi xảy ra. Vui lòng thử lại sau!" });
             }
         }
 
@@ -165,6 +187,16 @@ namespace ShoeShopWebsite.Controllers
         {
             try
             {
+                if (!User.Identity.IsAuthenticated)
+                {
+                    return Json(new { success = false, message = "Chưa đăng nhập, vui lòng đăng nhập!" });
+                }
+
+                if (!User.IsInRole(SD.Role_Customer))
+                {
+                    return Json(new { success = false, message = "Bạn không có quyền truy cập chức năng này!" });
+                }
+
                 var cartIdentifier = GetCartIdentifier();
                 var cartItem = await _context.Carts
                     .FirstOrDefaultAsync(c => c.CartID == cartId && c.SessionId == cartIdentifier);
@@ -195,6 +227,16 @@ namespace ShoeShopWebsite.Controllers
         {
             try
             {
+                if (!User.Identity.IsAuthenticated)
+                {
+                    return Json(new { success = false, message = "Chưa đăng nhập, vui lòng đăng nhập!" });
+                }
+
+                if (!User.IsInRole(SD.Role_Customer))
+                {
+                    return Json(new { success = false, message = "Bạn không có quyền truy cập chức năng này!" });
+                }
+
                 var cartIdentifier = GetCartIdentifier();
                 Console.WriteLine($"UpdateCartItem - CartIdentifier: {cartIdentifier}, CartId: {cartId}, SizeId: {sizeId}, ColorId: {colorId}, Quantity: {quantity}");
 
@@ -280,6 +322,11 @@ namespace ShoeShopWebsite.Controllers
         {
             try
             {
+                if (!User.Identity.IsAuthenticated)
+                {
+                    return 0; // Trả về 0 nếu chưa đăng nhập
+                }
+
                 var cartIdentifier = GetCartIdentifier();
                 var cartCount = await _context.Carts
                     .Where(c => c.SessionId == cartIdentifier)

@@ -1,0 +1,70 @@
+﻿@model ShoeShopWebsite.Models.Order
+
+@{
+    ViewData["Title"] = "Thanh toán thành công";
+    Layout = "~/Views/Shared/_Layout.cshtml"; // Rõ ràng khai báo layout
+}
+
+<div class="payment-container">
+    <div class="success-message">
+        <h3 class="text-success">Thanh toán thành công!</h3>
+        <p>Cảm ơn bạn đã mua sắm tại ShoeShop.</p>
+    </div>
+
+    @if (Model != null)
+    {
+        <div class="info-box">
+            <div>
+                <h5>Thông tin đơn hàng</h5>
+                <p><strong>Mã đơn hàng:</strong> @Model.OrderID</p>
+                <p><strong>Khách hàng:</strong> @(Model.FullName ?? "Không xác định")</p>
+                <p><strong>Số điện thoại:</strong> @(Model.PhoneNumber ?? "Không xác định")</p>
+                <p><strong>Ngày đặt hàng:</strong> @Model.OrderDate.ToString("dd/MM/yyyy HH:mm")</p>
+                <p><strong>Phương thức thanh toán:</strong> @(Model.PaymentMethod ?? "Không xác định")</p>
+            </div>
+            <p class="total-price">Tổng tiền: @String.Format("{0:N0}", Model.TotalPrice) VND</p>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-danger">
+            <p>Không tìm thấy thông tin đơn hàng.</p>
+        </div>
+    }
+
+    <a href="@Url.Action("Index", "Home")" class="btn btn-primary btn-home">Quay lại trang chủ</a>
+</div>
+
+<style>
+    .payment-container {
+        margin-top: 20px;
+        max-width: 900px; /* Chiều rộng cho nội dung trang */
+    }
+
+    .success-message {
+        margin-bottom: 20px;
+    }
+
+    .info-box {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        margin-bottom: 20px;
+        width: 100%;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .total-price {
+        font-weight: bold;
+        color: #dc3545;
+    }
+
+    .btn-home {
+        margin-top: 15px;
+        width: 150px;
+    }
+</style>

@@ -42,7 +42,7 @@
                     <td>
                         <a href="@Url.Action("ProductDetails", "Employee", new { id = p.ProductID })" class="btn btn-view">Xem</a>
                         <a href="@Url.Action("EditProduct", "Employee", new { id = p.ProductID })" class="btn btn-edit">Sửa</a>
-                        <a href="@Url.Action("DeleteProduct", "Employee", new { id = p.ProductID })" class="btn btn-delete">Xóa</a>
+                        @* <a href="@Url.Action("DeleteProduct", "Employee", new { id = p.ProductID })" class="btn btn-delete">Xóa</a> *@
                     </td>
                 </tr>
             }

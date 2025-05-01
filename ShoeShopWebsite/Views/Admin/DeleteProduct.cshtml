@@ -54,8 +54,8 @@
             </dd>
         </dl>
 
-        <form asp-controller="Admin" asp-action="DeleteProduct" method="post">
-            <input type="hidden" asp-for="ProductID" />
+        <form asp-controller="Admin" asp-action="DeleteProductConfirmed" asp-route-id="@Model.ProductID" method="post">
+            @Html.AntiForgeryToken()
             <input type="submit" value="Xóa" class="btn btn-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa sản phẩm này?');" />
             <a asp-action="ProductList" asp-controller="Admin" class="btn btn-secondary">Quay lại</a>
         </form>

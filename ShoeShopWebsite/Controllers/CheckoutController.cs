@@ -2,13 +2,15 @@
 using Microsoft.EntityFrameworkCore;
 using ShoeShopWebsite.Models;
 using ShoeShopWebsite.Models.Vnpay;
-using ShoeShopWebsite.Services;
 using ShoeShopWebsite.Services.VnPay;
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using ShoeShopWebsite.Services.NewFolder;
+using Azure;
+using System.IO;
 
 namespace ShoeShopWebsite.Controllers
 {
@@ -146,6 +148,7 @@ namespace ShoeShopWebsite.Controllers
 
                 _context.Orders.Add(order);
                 await _context.SaveChangesAsync();
+                Console.WriteLine($"[ProcessPayment] Đơn hàng #{order.OrderID} đã được lưu thành công.");
 
                 foreach (var item in cartItems)
                 {
@@ -220,12 +223,13 @@ namespace ShoeShopWebsite.Controllers
 
                         var paymentInfo = new PaymentInformationModel
                         {
-                            Name = order.FullName,
-                            OrderDescription = $"Thanh toan don hang #{order.OrderID}",
+                            OrderId = order.OrderID.ToString(),
+                            Amount = order.TotalPrice,
+                            OrderInfo = $"Thanh toan don hang #{order.OrderID} cua {order.FullName} voi so tien {totalPrice:N0} VND",
                             OrderType = "250000",
-                            Amount = (double)(totalPrice)
+                            Name = order.FullName
                         };
-                        Console.WriteLine($"[VNPay] Sending data: Name={paymentInfo.Name}, Description={paymentInfo.OrderDescription}, Amount={paymentInfo.Amount}, OrderType={paymentInfo.OrderType}");
+                        Console.WriteLine($"[VNPay] Sending data: OrderId={paymentInfo.OrderId}, Amount={paymentInfo.Amount}, OrderInfo={paymentInfo.OrderInfo}, OrderType={paymentInfo.OrderType}, Name={paymentInfo.Name}");
                         try
                         {
                             var vnpayUrl = _vnpayService.CreatePaymentUrl(paymentInfo, HttpContext);
@@ -239,11 +243,12 @@ namespace ShoeShopWebsite.Controllers
                             _context.Carts.RemoveRange(cartItems);
                             await _context.SaveChangesAsync();
                             HttpContext.Session.SetInt32("PendingOrderId", order.OrderID);
+                            Console.WriteLine($"[VNPay] Saved PendingOrderId: {order.OrderID}");
                             return Redirect(vnpayUrl);
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"[VNPay] Error creating URL: {ex.Message}");
+                            Console.WriteLine($"[VNPay] Error creating URL: {ex.Message}, StackTrace: {ex.StackTrace}");
                             TempData["ErrorMessage"] = $"Lỗi khi tạo URL thanh toán VNPay: {ex.Message}";
                             model.CartItems = cartItems;
                             return View("Index", model);
@@ -270,12 +275,173 @@ namespace ShoeShopWebsite.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> PaymentCallbackVnpay()
+        {
+            try
+            {
+                Console.WriteLine("[VNPayCallback] Nhận callback với query: " + Request.QueryString);
+                var response = _vnpayService.PaymentExecute(Request.Query);
+                Console.WriteLine($"[VNPayCallback] Phản hồi: Success={response.Success}, VnPayResponseCode={response.VnPayResponseCode}, Message={response.Message}");
+
+                if (response.Success && response.VnPayResponseCode == "00")
+                {
+                    // Lấy OrderID từ vnp_OrderInfo
+                    var orderInfo = Request.Query["vnp_OrderInfo"].ToString();
+                    Console.WriteLine($"[VNPayCallback] vnp_OrderInfo: {orderInfo}");
+
+                    int orderId = -1;
+                    var orderIdMatch = Regex.Match(orderInfo, @"#(\d+)");
+                    if (orderIdMatch.Success && int.TryParse(orderIdMatch.Groups[1].Value, out orderId))
+                    {
+                        Console.WriteLine($"[VNPayCallback] OrderID từ regex: {orderId}");
+                    }
+                    else
+                    {
+                        var parts = orderInfo.Split('#');
+                        if (parts.Length > 1)
+                        {
+                            var orderIdPart = parts[1].Split(' ')[0];
+                            if (int.TryParse(orderIdPart, out orderId))
+                            {
+                                Console.WriteLine($"[VNPayCallback] OrderID từ split: {orderId}");
+                            }
+                        }
+                    }
+
+                    // Lấy pendingOrderId từ session một lần duy nhất
+                    var pendingOrderId = HttpContext.Session.GetInt32("PendingOrderId");
+
+                    if (orderId == -1)
+                    {
+                        // Thử lấy từ session nếu không phân tích được
+                        if (pendingOrderId.HasValue)
+                        {
+                            orderId = pendingOrderId.Value;
+                            Console.WriteLine($"[VNPayCallback] OrderID từ session (dự phòng): {orderId}");
+                        }
+                    }
+
+                    if (orderId == -1)
+                    {
+                        Console.WriteLine("[VNPayCallback] Không thể phân tích OrderID từ vnp_OrderInfo hoặc session");
+                        return Content("Lỗi: Không thể phân tích OrderID từ vnp_OrderInfo hoặc session.");
+                    }
+
+                    // Tìm đơn hàng trong cơ sở dữ liệu, bao gồm chi tiết đơn hàng
+                    var order = await _context.Orders
+                        .Include(o => o.OrderDetails)
+                            .ThenInclude(od => od.Product)
+                        .Include(o => o.OrderDetails)
+                            .ThenInclude(od => od.Size)
+                        .Include(o => o.OrderDetails)
+                            .ThenInclude(od => od.Color)
+                        .FirstOrDefaultAsync(o => o.OrderID == orderId);
+
+                    if (order == null)
+                    {
+                        Console.WriteLine($"[VNPayCallback] Không tìm thấy đơn hàng #{orderId}");
+                        return Content($"Lỗi: Không tìm thấy đơn hàng #{orderId}.");
+                    }
+
+                    // Cập nhật trạng thái đơn hàng ngay sau khi xác nhận giao dịch thành công
+                    order.Status = "Đã thanh toán";
+                    await _context.SaveChangesAsync();
+                    Console.WriteLine($"[VNPayCallback] Cập nhật trạng thái đơn hàng #{order.OrderID} thành công");
+
+                    // Kiểm tra session (tái sử dụng pendingOrderId)
+                    if (pendingOrderId.HasValue && pendingOrderId.Value != orderId)
+                    {
+                        Console.WriteLine($"[VNPayCallback] PendingOrderId không khớp: Session={pendingOrderId.Value}, Callback={orderId}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[VNPayCallback] OrderID từ callback: {orderId}, PendingOrderId từ session: {pendingOrderId}");
+                    }
+
+                    // So sánh số tiền (chỉ để ghi log, không chặn)
+                    var vnpAmountRaw = decimal.Parse(Request.Query["vnp_Amount"]);
+                    var vnpAmount = vnpAmountRaw / 100;
+                    Console.WriteLine($"[VNPayCallback] So sánh số tiền: TotalPrice={order.TotalPrice}, vnp_Amount={vnpAmount}, Difference={Math.Abs(order.TotalPrice - vnpAmount)}");
+
+                    // Xóa PendingOrderId khỏi session
+                    HttpContext.Session.Remove("PendingOrderId");
+
+                    // Kiểm tra file view tồn tại
+                    var viewPath = Path.Combine(Directory.GetCurrentDirectory(), "Views", "Checkout", "PaymentCallbackVnpay.cshtml");
+                    if (!System.IO.File.Exists(viewPath))
+                    {
+                        Console.WriteLine($"[VNPayCallback] File view không tồn tại tại: {viewPath}");
+                        return Content($"Lỗi: File view PaymentCallbackVnpay.cshtml không tồn tại tại {viewPath}.");
+                    }
+
+                    // Hiển thị trang PaymentCallbackVnpay.cshtml, truyền đối tượng Order
+                    Console.WriteLine("[VNPayCallback] Hiển thị trang PaymentCallbackVnpay.cshtml");
+                    return View("~/Views/Checkout/PaymentCallbackVnpay.cshtml", order);
+                }
+                else
+                {
+                    Console.WriteLine($"[VNPayCallback] Thanh toán thất bại: Success={response.Success}, VnPayResponseCode={response.VnPayResponseCode}, Message={response.Message}");
+                    return Content($"Thanh toán thất bại: {response.Message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[VNPayCallback] Lỗi: {ex.Message}, StackTrace: {ex.StackTrace}");
+                return Content($"Lỗi xử lý callback VNPay: {ex.Message}");
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CheckOrderStatus(int orderId)
+        {
+            try
+            {
+                var order = await _context.Orders.FindAsync(orderId);
+                if (order == null)
+                {
+                    return Json(new { success = false, message = $"Không tìm thấy đơn hàng #{orderId}" });
+                }
+
+                var isPaid = order.Status == "Đã thanh toán";
+                return Json(new
+                {
+                    success = true,
+                    orderId = order.OrderID,
+                    status = order.Status,
+                    isPaid = isPaid,
+                    totalPrice = order.TotalPrice,
+                    fullName = order.FullName
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[CheckOrderStatus] Lỗi: {ex.Message}, StackTrace: {ex.StackTrace}");
+                return Json(new { success = false, message = $"Lỗi khi kiểm tra trạng thái đơn hàng: {ex.Message}" });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> OrderSuccess(int orderId)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            if (order == null)
+            {
+                Console.WriteLine($"[OrderSuccess] Không tìm thấy đơn hàng #{orderId}");
+                TempData["ErrorMessage"] = "Không tìm thấy đơn hàng.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            Console.WriteLine($"[OrderSuccess] Hiển thị trang Thanh toán thành công cho đơn hàng #{orderId}");
+            ViewBag.SuccessMessage = TempData["SuccessMessage"]?.ToString() ?? "Thanh toán thành công!";
+            ViewBag.OrderId = order.OrderID;
+            ViewBag.Amount = order.TotalPrice;
+            return View();
+        }
+
+        [HttpGet]
         public async Task<IActionResult> OrderConfirmation(int orderId)
         {
-            // Lấy thông tin khách hàng từ session hoặc thông tin đăng nhập
             var sessionId = GetSessionId();
-
-            // Tìm đơn hàng theo ID và kiểm tra xem đơn hàng có thuộc về session này không
             var order = await _context.Orders
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Product)
@@ -295,48 +461,6 @@ namespace ShoeShopWebsite.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> VNPayCallback()
-        {
-            var response = _vnpayService.PaymentExecute(Request.Query);
-            Console.WriteLine($"[VNPayCallback] Response: Success={response.Success}, VnPayResponseCode={response.VnPayResponseCode}");
-
-            if (!response.Success)
-            {
-                TempData["ErrorMessage"] = "Chữ ký không hợp lệ từ VNPay!";
-                return RedirectToAction("Index");
-            }
-
-            var orderId = HttpContext.Session.GetInt32("PendingOrderId");
-            if (!orderId.HasValue)
-            {
-                TempData["ErrorMessage"] = "Không thể xác định đơn hàng từ callback!";
-                return RedirectToAction("Index");
-            }
-
-            var order = await _context.Orders.FirstOrDefaultAsync(o => o.OrderID == orderId.Value);
-            if (order == null)
-            {
-                TempData["ErrorMessage"] = "Không tìm thấy đơn hàng!";
-                return RedirectToAction("Index");
-            }
-
-            if (response.VnPayResponseCode == "00")
-            {
-                order.Status = "Completed";
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Thanh toán VNPay thành công!";
-            }
-            else
-            {
-                order.Status = "Failed";
-                await _context.SaveChangesAsync();
-                TempData["ErrorMessage"] = $"Thanh toán VNPay thất bại! Mã lỗi: {response.VnPayResponseCode}";
-            }
-
-            HttpContext.Session.Remove("PendingOrderId");
-            return RedirectToAction("OrderConfirmation", new { orderId = order.OrderID });
-        }
-        [HttpGet]
         [Route("MyOrders")]
         public async Task<IActionResult> MyOrders()
         {
@@ -347,6 +471,7 @@ namespace ShoeShopWebsite.Controllers
                 .ToListAsync();
             return View("~/Views/Checkout/MyOrders.cshtml", orders);
         }
+
         [HttpGet]
         public async Task<IActionResult> GetOrderCount()
         {
