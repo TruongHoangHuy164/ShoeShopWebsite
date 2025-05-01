@@ -75,7 +75,11 @@ namespace ShoeShopWebsite.Areas.Identity.Pages.Account
                     EnableSsl = true,
                     DeliveryMethod = SmtpDeliveryMethod.Network,
                     UseDefaultCredentials = false,
+//<<<<<<< Hoang
+//                    Credentials = new System.Net.NetworkCredential("coi31052004@gmail.com", "crtv sqkz epfg hfwj")
+//=======
                     Credentials = new System.Net.NetworkCredential("nonghoi2004@gmail.com", "iwct fxmo lzzb earc")
+//>>>>>>> master
                 })
                 {
                     var message = new MailMessage(
