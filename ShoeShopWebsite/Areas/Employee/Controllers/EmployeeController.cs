@@ -749,5 +749,12 @@ namespace ShoeShopWebsite.Controllers
                 return RedirectToAction(nameof(Dashboard));
             }
         }
+        // GET: /Employee/Chat
+        [HttpGet]
+        [Route("ChatEmployee")]
+        public IActionResult ChatEmployee()
+        {
+            return View("~/Views/Employee/ChatEmployee.cshtml");
+        }
     }
 }

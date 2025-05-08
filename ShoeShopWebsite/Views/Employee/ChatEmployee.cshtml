@@ -1,0 +1,495 @@
+﻿@{
+    ViewData["Title"] = "Chat Nhân Viên";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="chat-container">
+    <div class="chat-sidebar">
+        <h3>Khách hàng trực tuyến</h3>
+        <div class="connection-status-container">
+            <span>Trạng thái: </span>
+            <span id="connection-status" class="connection-status disconnected"></span>
+        </div>
+        <ul id="customerList" class="customer-list"></ul>
+        <div id="no-customers" class="no-customers-message">
+            <p>Không có khách hàng nào trực tuyến.</p>
+        </div>
+    </div>
+    <div class="chat-main">
+        <div id="chat-content" class="chat-content">
+            <div class="chat-header" id="chat-header">
+                <span id="chat-with">Chọn khách hàng để trò chuyện</span>
+            </div>
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="chat-input" id="chat-input" style="display: none;">
+                <input type="text" class="message-input" placeholder="Nhập tin nhắn..." autocomplete="off" />
+                <button class="send-button">Gửi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .chat-container {
+        display: flex;
+        height: 85vh;
+        width: 95%;
+        margin: 20px auto;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    .chat-sidebar {
+        width: 300px;
+        background: #1a1a1a;
+        color: #fff;
+        padding: 20px;
+        overflow-y: auto;
+    }
+
+        .chat-sidebar h3 {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+    .connection-status-container {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+        font-size: 0.9em;
+        color: #ccc;
+    }
+
+    .connection-status {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-left: 10px;
+        transition: background-color 0.3s ease;
+    }
+
+        .connection-status.connected {
+            background-color: #00cc00;
+        }
+
+        .connection-status.disconnected {
+            background-color: #ff3333;
+        }
+
+    .customer-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+        .customer-list li {
+            padding: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #333;
+            transition: background-color 0.2s ease;
+        }
+
+            .customer-list li:hover {
+                background: #333;
+            }
+
+            .customer-list li.active {
+                background: #fff;
+                color: #000;
+                border-radius: 8px;
+            }
+
+                .customer-list li.active .status-dot {
+                    background: #000;
+                }
+
+            .customer-list li .avatar {
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                background: #555;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.9em;
+                color: #fff;
+            }
+
+            .customer-list li .customer-name {
+                flex-grow: 1;
+            }
+
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #00cc00;
+    }
+
+    .chat-main {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        background: #f8f9fa;
+    }
+
+    .chat-content {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-header {
+        background: #000;
+        color: #fff;
+        padding: 15px 20px;
+        font-size: 1.1em;
+        font-weight: 600;
+        border-bottom: 1px solid #333;
+    }
+
+    .chat-messages {
+        flex-grow: 1;
+        padding: 20px;
+        overflow-y: auto;
+        background: #fff;
+    }
+
+    .chat-input {
+        display: flex;
+        padding: 15px 20px;
+        background: #fff;
+        border-top: 1px solid #e0e0e0;
+        gap: 10px;
+    }
+
+        .chat-input input {
+            flex-grow: 1;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            padding: 10px 15px;
+            font-size: 0.9em;
+            transition: border-color 0.2s ease;
+        }
+
+            .chat-input input:focus {
+                border-color: #000;
+                outline: none;
+            }
+
+        .chat-input button {
+            background: #000;
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 20px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+            .chat-input button:hover {
+                background: #333;
+            }
+
+    .message {
+        margin: 12px 0;
+        padding: 12px 15px;
+        border-radius: 15px;
+        max-width: 75%;
+        word-wrap: break-word;
+        line-height: 1.5;
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+        .message.sent {
+            background: #000;
+            color: #fff;
+            margin-left: auto;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.received {
+            background: #e0e0e0;
+            color: #000;
+            margin-right: auto;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message.error {
+            background: #fff5f5;
+            color: #ff3333;
+            border: 1px solid #ff3333;
+            margin: 10px auto;
+            text-align: center;
+            max-width: 90%;
+        }
+
+        .message .avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            color: #fff;
+        }
+
+        .message.sent .avatar {
+            background: #fff;
+            color: #000;
+        }
+
+        .message.received .avatar {
+            background: #333;
+            color: #fff;
+        }
+
+        .message .content {
+            flex-grow: 1;
+        }
+
+        .message .timestamp {
+            font-size: 0.75em;
+            color: #999;
+            margin-top: 5px;
+            display: block;
+        }
+
+        .message.sent .timestamp {
+            color: #ccc;
+        }
+
+    .no-customers-message {
+        text-align: center;
+        color: #666;
+        padding: 20px;
+        font-style: italic;
+    }
+
+    .typing-indicator {
+        font-size: 0.8em;
+        color: #666;
+        padding: 10px;
+        font-style: italic;
+    }
+</style>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/chatHub", {
+                    accessTokenFactory: () => '@User.FindFirst("access_token")?.Value'
+                })
+                .withAutomaticReconnect({
+                    nextRetryDelayInMilliseconds: retryContext => {
+                        if (retryContext.elapsedMilliseconds < 60000) {
+                            return Math.random() * 2000 + 2000; // 2-4 seconds
+                        }
+                        return null; // Stop reconnecting after 1 minute
+                    }
+                })
+                .configureLogging(signalR.LogLevel.Information)
+                .build();
+
+            const currentUser = '@User.Identity?.Name';
+            const currentUserId = '@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value';
+            let activeCustomerId = null;
+            let activeCustomerName = null;
+            let customerMap = {};
+            let messageHistory = {};
+
+            function updateConnectionStatus(connected) {
+                const statusElement = $('#connection-status');
+                statusElement.removeClass('connected disconnected');
+                statusElement.addClass(connected ? 'connected' : 'disconnected');
+            }
+
+            function formatTimestamp() {
+                return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            }
+
+            function showMessage(customerId, senderId, senderName, message, isSent) {
+                const messageClass = isSent ? 'sent' : 'received';
+                const displayName = isSent ? 'Bạn' : senderName;
+                const avatarInitial = displayName.charAt(0).toUpperCase();
+                const timestamp = formatTimestamp();
+                const msg = `
+                    <div class="message ${messageClass}">
+                        <div class="avatar">${avatarInitial}</div>
+                        <div class="content">
+                            <strong>${displayName}:</strong> ${message}
+                            <span class="timestamp">${timestamp}</span>
+                        </div>
+                    </div>`;
+
+                if (!messageHistory[customerId]) {
+                    messageHistory[customerId] = [];
+                }
+                messageHistory[customerId].push(msg);
+
+                if (customerId === activeCustomerId) {
+                    $('#chat-messages').append(msg);
+                    $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
+                }
+
+                if (!customerMap[senderName] && !isSent) {
+                    customerMap[senderName] = senderId;
+                    addCustomerToList(senderId, senderName);
+                }
+            }
+
+            function showError(message) {
+                const errorMsg = `<div class="message error">🚫 ${message}</div>`;
+                $('#chat-messages').append(errorMsg);
+                $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
+                if (activeCustomerId) {
+                    if (!messageHistory[activeCustomerId]) {
+                        messageHistory[activeCustomerId] = [];
+                    }
+                    messageHistory[activeCustomerId].push(errorMsg);
+                }
+            }
+
+            function addCustomerToList(customerId, customerName) {
+                const avatarInitial = customerName.charAt(0).toUpperCase();
+                const listItem = $(`
+                    <li data-customer-id="${customerId}" data-customer-name="${customerName}"
+                        class="${activeCustomerId === customerId ? 'active' : ''}">
+                        <div class="avatar">${avatarInitial}</div>
+                        <span class="customer-name">${customerName}</span>
+                        <span class="status-dot status-online"></span>
+                    </li>
+                `);
+                $('#customerList').append(listItem);
+                $('#no-customers').hide();
+            }
+
+            connection.onclose(() => {
+                updateConnectionStatus(false);
+                showError("🔌 Mất kết nối với server chat. Đang thử kết nối lại...");
+            });
+
+            connection.onreconnecting(() => {
+                updateConnectionStatus(false);
+                showError("🔄 Đang thử kết nối lại...");
+            });
+
+            connection.onreconnected(() => {
+                updateConnectionStatus(true);
+                connection.invoke("GetActiveCustomers")
+                    .catch(err => showError("❌ Lỗi khi làm mới danh sách khách hàng: " + err.message));
+            });
+
+            connection.on("UpdateCustomerList", (customers) => {
+                $('#customerList').empty();
+                customerMap = {};
+                if (customers.length === 0) {
+                    $('#no-customers').show();
+                } else {
+                    $('#no-customers').hide();
+                    customers.forEach(customer => {
+                        const customerId = customer.id;
+                        const customerName = customer.userName;
+                        customerMap[customerName] = customerId;
+                        addCustomerToList(customerId, customerName);
+                    });
+                }
+            });
+
+            connection.on("ReceivePrivateMessage", (senderId, senderName, message) => {
+                console.log(`Nhận tin nhắn từ ${senderName} (${senderId}): ${message}`);
+                showMessage(senderId, senderId, senderName, message, false);
+            });
+
+            connection.on("ReceiveError", (errorMessage) => {
+                showError(errorMessage);
+            });
+
+            $('#customerList').on('click', 'li', function () {
+                const customerId = $(this).data('customer-id');
+                const customerName = $(this).data('customer-name');
+
+                if (activeCustomerId !== customerId) {
+                    activeCustomerId = customerId;
+                    activeCustomerName = customerName;
+
+                    $('#chat-messages').empty();
+                    $('#chat-header').html(`<span>Chat với ${customerName}</span>`);
+                    $('#chat-input').show();
+                    $('.customer-list li').removeClass('active');
+                    $(this).addClass('active');
+
+                    if (messageHistory[customerId]) {
+                        messageHistory[customerId].forEach(msg => $('#chat-messages').append(msg));
+                        $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
+                    } else {
+                        showMessage(customerId, 'System', 'Hệ thống', `Bắt đầu trò chuyện với ${customerName}`, false);
+                    }
+                }
+            });
+
+            $('.chat-input').on('click', '.send-button', function () {
+                const message = $('.message-input').val().trim();
+                if (!message) {
+                    showError("Vui lòng nhập tin nhắn!");
+                    return;
+                }
+
+                if (connection.state !== signalR.HubConnectionState.Connected) {
+                    showError("Không thể gửi tin nhắn. Vui lòng kiểm tra kết nối.");
+                    return;
+                }
+
+                if (!activeCustomerId) {
+                    showError("Vui lòng chọn khách hàng để trò chuyện!");
+                    return;
+                }
+
+                showMessage(activeCustomerId, currentUserId, 'Bạn', message, true);
+
+                connection.invoke("SendPrivateMessage", activeCustomerId, message)
+                    .then(() => $('.message-input').val(''))
+                    .catch(err => {
+                        console.error("Gửi thất bại:", err);
+                        showError("Gửi tin nhắn thất bại: " + err.message);
+                    });
+            });
+
+            $('.chat-input').on('keypress', '.message-input', function (e) {
+                if (e.key === "Enter") {
+                    $('.send-button').click();
+                }
+            });
+
+            async function startConnection() {
+                try {
+                    await connection.start();
+                    updateConnectionStatus(true);
+                    console.log("✅ SignalR kết nối thành công");
+                    await connection.invoke("GetActiveCustomers");
+                } catch (err) {
+                    console.error("❌ Kết nối SignalR thất bại:", err);
+                    showError("❌ Không thể kết nối với server chat!");
+                    updateConnectionStatus(false);
+                }
+            }
+
+            startConnection();
+        });
+    </script>
+}
