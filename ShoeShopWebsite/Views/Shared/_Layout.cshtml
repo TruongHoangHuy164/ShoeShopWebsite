@@ -53,9 +53,6 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark fw-bold" asp-controller="AboutUs" asp-action="Index">AboutUs</a>
                         </li>
-                        @* <li class="nav-item"> *@
-                        @*     <a class="nav-link text-dark fw-bold" asp-controller="Home" asp-action="Chat">Chat Với Chúng Tôi</a> *@
-                        @* </li> *@
                         @if (User.IsInRole(SD.Role_Admin))
                         {
                             <li class="nav-item">
@@ -87,6 +84,9 @@
                         <i class="bi bi-heart fs-5"></i>
                         <span id="wishlistCount" class="wishlist-count position-absolute top-0 start-100 translate-middle badge rounded-pill bg-dark">0</span>
                     </a>
+                    <button id="darkModeToggle" class="btn btn-outline-dark me-2">
+                        <i class="bi bi-moon-stars-fill"></i>
+                    </button>
                     <partial name="_LoginPartial" />
                 </div>
             </div>
@@ -147,6 +147,23 @@
             updateWishlistCount();
             updateOrderCount();
 
+            // Dark mode functionality
+            const darkModeToggle = $('#darkModeToggle');
+            const body = $('body');
+            const isDarkMode = localStorage.getItem('darkMode') === 'true';
+
+            if (isDarkMode) {
+                body.addClass('dark-mode');
+                darkModeToggle.find('i').removeClass('bi-moon-stars-fill').addClass('bi-sun-fill');
+            }
+
+            darkModeToggle.on('click', function() {
+                body.toggleClass('dark-mode');
+                const isDark = body.hasClass('dark-mode');
+                localStorage.setItem('darkMode', isDark);
+                $(this).find('i').toggleClass('bi-moon-stars-fill bi-sun-fill');
+            });
+
             function showToast(message, isSuccess = true) {
                 const toast = $('#notificationToast');
                 toast.find('.toast-body').text(message);
@@ -198,14 +215,66 @@
 </html>
 
 <style>
-    /* Navbar (giữ nguyên bo viền) */
+    :root {
+        --background-color: #fff;
+        --text-color: #333;
+        --link-color: #0077cc;
+        --footer-bg: #1a1a1a;
+        --footer-text: #fff;
+        --card-bg: #fff;
+        --card-text: #666;
+        --navbar-link: #333;
+    }
+
+    .dark-mode {
+        --background-color: #1a1a1a;
+        --text-color: #fff;
+        --link-color: #66b3ff;
+        --footer-bg: #121212;
+        --footer-text: #e0e0e0;
+        --card-bg: #2d2d2d;
+        --card-text: #ccc;
+        --navbar-link: #fff;
+    }
+
+    body {
+        background-color: var(--background-color);
+        color: var(--text-color);
+        transition: all 0.3s ease;
+    }
+
+    a {
+        color: var(--link-color);
+    }
+
+    .navbar-nav .nav-link {
+        color: var(--navbar-link) !important;
+    }
+
+    .footer {
+        background: var(--footer-bg);
+        color: var(--footer-text);
+    }
+
+    .product-card {
+        background: var(--card-bg);
+    }
+
+        .product-card .card-text {
+            color: var(--card-text);
+        }
+
+    .dark-mode .navbar {
+        background: linear-gradient(90deg, #2d2d2d, #4a4a4a) !important;
+    }
+
+    /* Existing styles */
     .navbar {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         padding: 0.5rem 1rem;
     }
 
     .navbar-nav .nav-link {
-        color: #333 !important;
         padding: 8px 12px;
         transition: all 0.3s ease;
         border-radius: 5px;
@@ -214,39 +283,6 @@
 
         .navbar-nav .nav-link:hover {
             color: #fff !important;
-            background-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .navbar-nav .nav-link::after {
-            content: '';
-            position: absolute;
-            width: 0;
-            height: 2px;
-            bottom: 0;
-            left: 50%;
-            background-color: #fff;
-            transition: all 0.3s ease;
-            transform: translateX(-50%);
-        }
-
-        .navbar-nav .nav-link:hover::after {
-            width: 50%;
-        }
-
-    .admin-dashboard-link {
-        font-weight: bold;
-        background-color: rgba(255, 255, 255, 0.1);
-    }
-
-        .admin-dashboard-link:hover {
-            background-color: rgba(255, 255, 255, 0.3);
-        }
-
-    .employee-dashboard-link {
-        background-color: rgba(255, 255, 255, 0.05);
-    }
-
-        .employee-dashboard-link:hover {
             background-color: rgba(255, 255, 255, 0.2);
         }
 
@@ -263,16 +299,9 @@
         padding: 2px 6px;
     }
 
-    /* Main Content */
     .container-fluid {
         max-width: 1400px;
         margin: 0 auto;
-    }
-
-    /* Footer */
-    .footer {
-        background: #1a1a1a;
-        padding: 60px 0;
     }
 
     .hover-link {
@@ -292,7 +321,6 @@
             color: #FFBD71;
         }
 
-    /* Loading Overlay */
     .loading-overlay {
         display: none;
         position: fixed;
@@ -326,14 +354,12 @@
         }
     }
 
-    /* Product Card */
     .product-card {
         position: relative;
         overflow: hidden;
         border: none;
         border-radius: 10px;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
-        background: #fff;
     }
 
         .product-card:hover {
@@ -361,12 +387,7 @@
             font-size: 1.2rem;
             font-weight: 600;
             margin-bottom: 10px;
-            color: #333;
-        }
-
-        .product-card .card-text {
-            font-size: 1rem;
-            color: #666;
+            color: var(--text-color);
         }
 
         .product-card .btn {
@@ -375,7 +396,7 @@
             border-radius: 50px;
             padding: 8px 20px;
             transition: background 0.3s ease;
-        }
+        } 
 
             .product-card .btn:hover {
                 background: #FFBD71;

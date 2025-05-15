@@ -1,17 +1,17 @@
 ﻿@{
-    ViewData["Title"] = "Chat Realtime";
+    ViewData["Title"] = "Customer Chat";
+    var employeeId = ViewData["EmployeeId"]?.ToString() ?? "";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<!-- Cửa sổ chat -->
-<div id="chat-window" class="chat-window">
+<div class="chat-window" id="customer-chat">
     <div class="chat-header">
-        <span>Tư vấn khách hàng</span>
-        <button id="close-chat" class="btn-close btn-close-white"></button>
+        <span>💬 Hỗ trợ trực tuyến</span>
     </div>
-    <div id="chatBox" class="chat-messages"></div>
+    <div class="chat-messages" id="chat-messages"></div>
     <div class="chat-input">
-        <input type="text" id="messageInput" placeholder="Nhập tin nhắn..." />
-        <button id="sendButton" class="btn nike-btn nike-btn-primary">Gửi</button>
+        <input type="text" id="message-input" placeholder="Nhập tin nhắn..." autocomplete="off" />
+        <button id="send-button" class="btn nike-btn nike-btn-primary">Gửi</button>
     </div>
 </div>
 
@@ -20,127 +20,388 @@
         position: fixed;
         bottom: 20px;
         right: 20px;
-        width: 350px;
-        height: 450px;
+        width: 360px;
+        height: 500px;
         background: #fff;
         border: 2px solid #000;
-        border-radius: 10px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         z-index: 1000;
         display: flex;
         flex-direction: column;
+        font-family: 'Segoe UI', sans-serif;
     }
 
     .chat-header {
         background: #000;
         color: #fff;
-        padding: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-top-left-radius: 8px;
-        border-top-right-radius: 8px;
-        font-family: 'Arial', sans-serif;
-        font-weight: 600;
-        text-transform: uppercase;
+        padding: 14px;
+        font-weight: bold;
+        font-size: 16px;
+        text-align: center;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
     }
 
     .chat-messages {
         flex-grow: 1;
-        padding: 15px;
+        padding: 12px;
         overflow-y: auto;
-        background: #f5f5f5;
+        background: #f9f9f9;
     }
 
     .chat-input {
         display: flex;
-        padding: 10px;
+        padding: 12px;
         border-top: 1px solid #ddd;
         background: #fff;
-        border-bottom-left-radius: 8px;
-        border-bottom-right-radius: 8px;
+        border-bottom-left-radius: 10px;
+        border-bottom-right-radius: 10px;
     }
 
         .chat-input input {
             flex-grow: 1;
             border: 1px solid #ccc;
-            border-radius: 5px;
-            padding: 8px;
-            margin-right: 10px;
-            font-family: 'Arial', sans-serif;
+            border-radius: 20px;
+            padding: 8px 14px;
+            font-size: 14px;
         }
 
-    .chat-messages .message {
+        .chat-input button {
+            margin-left: 10px;
+            border-radius: 20px;
+            padding: 8px 18px;
+        }
+
+    .message {
         margin: 8px 0;
-        padding: 10px;
-        border-radius: 5px;
+        padding: 10px 14px;
+        border-radius: 16px;
         max-width: 80%;
         word-wrap: break-word;
+        line-height: 1.4;
     }
 
-        .chat-messages .message.sent {
-            background: #FF6450; /* Màu cam Nike */
+        .message.sent {
+            background: #FF6450;
             color: #fff;
-            align-self: flex-end;
             margin-left: auto;
+            text-align: right;
         }
 
-        .chat-messages .message.received {
-            background: #ddd;
+        .message.received {
+            background: #e0e0e0;
             color: #000;
-            align-self: flex-start;
+            margin-right: auto;
+        }
+
+        .message.error {
+            background: #ffe6e6;
+            color: #e74c3c;
+            border: 1px solid #e74c3c;
+            margin-left: auto;
+            margin-right: auto;
+            text-align: center;
         }
 </style>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
     <script>
         $(document).ready(function () {
-            // Kết nối đến Hub
+            // Khởi tạo SignalR
             const connection = new signalR.HubConnectionBuilder()
                 .withUrl("/chatHub", { accessTokenFactory: () => '@User.FindFirst("access_token")?.Value' })
-                .withAutomaticReconnect()
+                .withAutomaticReconnect({
+                    nextRetryDelayInMilliseconds: retryContext => {
+                        if (retryContext.elapsedMilliseconds < 60000) {
+                            return Math.random() * 2000 + 2000; // 2-4 seconds
+                        }
+                        return null; // Stop reconnecting after 1 minute
+                    }
+                })
+                .configureLogging(signalR.LogLevel.Information)
                 .build();
 
-            // Nhận tin nhắn từ server
-            connection.on("ReceiveMessage", (user, message) => {
-                const currentUser = '@User.Identity.Name';
-                const isSent = user === currentUser;
+            const currentUser = '@User.Identity?.Name';
+            const currentUserId = '@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value';
+            let employeeId = '@employeeId';
+            let messageHistory = [];
+
+            // Hàm tiện ích
+            function formatTimestamp() {
+                return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            }
+
+            function showMessage(senderId, senderName, message, isSent) {
                 const messageClass = isSent ? 'sent' : 'received';
-                const msg = `<div class="message ${messageClass}">${user}: ${message}</div>`;
-                $('#chatBox').append(msg);
-                $('#chatBox')[0].scrollTop = $('#chatBox')[0].scrollHeight;
+                const displayName = isSent ? 'Bạn' : senderName;
+                const timestamp = formatTimestamp();
+                const msg = `
+                    <div class="message ${messageClass}">
+                        <strong>${displayName}:</strong> ${message}
+                        <span class="timestamp">${timestamp}</span>
+                    </div>`;
+                $('#chat-messages').append(msg);
+                $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
+                messageHistory.push(msg);
+            }
+
+            function showError(message) {
+                const errorMsg = `<div class="message error">🚫 ${message}</div>`;
+                $('#chat-messages').append(errorMsg);
+                $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
+                messageHistory.push(errorMsg);
+            }
+
+            function showToast(message, isSuccess) {
+                const toast = $('#notificationToast');
+                if (toast.length) {
+                    toast.find('.toast-body').text(message);
+                    toast.removeClass('bg-success bg-danger').addClass(isSuccess ? 'bg-success' : 'bg-danger');
+                    toast.toast({ delay: 3000 });
+                    toast.toast('show');
+                } else {
+                    alert(message);
+                }
+            }
+
+            function fetchEmployeeId() {
+                $.ajax({
+                    url: '@Url.Action("GetAvailableEmployee", "Chat")',
+                    type: 'GET',
+                    success: function (response) {
+                        if (response.success && response.employeeId) {
+                            employeeId = response.employeeId;
+                            $('#send-button').prop('disabled', false);
+                            $('#retry-button').hide();
+                            showMessage(null, 'Hệ thống', 'Đã kết nối với nhân viên hỗ trợ.', false);
+                        } else {
+                            const errorMsg = response.message || 'Không tìm thấy nhân viên hỗ trợ.';
+                            showError(`${errorMsg} <a href="#" class="retry-link">Thử lại?</a>`);
+                            $('#send-button').prop('disabled', true);
+                            $('#retry-button').show();
+                            $('.retry-link').off('click').on('click', function (e) {
+                                e.preventDefault();
+                                $('#retry-button').click();
+                            });
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Lỗi AJAX:', xhr.responseText);
+                        showError('Lỗi kết nối server. Vui lòng thử lại sau. <a href="#" class="retry-link">Thử lại?</a>');
+                        $('#send-button').prop('disabled', true);
+                        $('#retry-button').show();
+                        $('.retry-link').off('click').on('click', function (e) {
+                            e.preventDefault();
+                            $('#retry-button').click();
+                        });
+                    }
+                });
+            }
+
+            // Xử lý sự kiện SignalR
+            connection.onclose((error) => {
+                console.error("Kết nối bị ngắt:", error);
+                showError("🔌 Mất kết nối đến máy chủ. Đang thử kết nối lại...");
+                $('#send-button').prop('disabled', true);
             });
 
-            // Bắt đầu kết nối
-            connection.start()
-                .then(() => console.log("SignalR connected successfully"))
-                .catch(err => console.error("SignalR connection failed: ", err.toString()));
+            connection.onreconnecting(() => {
+                showError("🔄 Đang thử kết nối lại...");
+                $('#send-button').prop('disabled', true);
+            });
 
-            // Gửi tin nhắn khi nhấn nút
-            $('#sendButton').on('click', function () {
-                const message = $('#messageInput').val().trim();
-                if (message) {
-                    connection.invoke("SendMessage", message)
-                        .then(() => {
-                            console.log("Message sent:", message);
-                            $('#messageInput').val('');
-                        })
-                        .catch(err => console.error("Send failed: ", err.toString()));
+            connection.onreconnected(() => {
+                showError("✅ Kết nối được khôi phục.");
+                $('#send-button').prop('disabled', false);
+                if (!employeeId || employeeId === "" || employeeId === "default-employee-id") {
+                    fetchEmployeeId();
                 }
             });
 
-            // Gửi tin nhắn khi nhấn Enter
-            $('#messageInput').on('keypress', function (e) {
-                if (e.key === "Enter") {
-                    $('#sendButton').click();
+            connection.on("ReceivePrivateMessage", (senderId, senderName, message) => {
+                console.log(`Nhận tin nhắn từ ${senderName} (${senderId}): ${message}`);
+                const isSent = senderId === currentUserId;
+                showMessage(senderId, senderName, message, isSent);
+            });
+
+            connection.on("ReceiveError", (errorMessage) => {
+                showError(errorMessage);
+            });
+
+            // Xử lý sự kiện UI
+            $('#chat-toggle').on('click', function () {
+                if (!'@User.Identity.IsAuthenticated') {
+                    showToast('Vui lòng đăng nhập để sử dụng chat!', false);
+                    return;
+                }
+                const $chatWindow = $('#customer-chat');
+                if ($chatWindow.hasClass('active')) {
+                    $chatWindow.removeClass('active');
+                } else {
+                    $chatWindow.addClass('active');
+                    $('#chat-messages').empty();
+                    messageHistory.forEach(msg => $('#chat-messages').append(msg));
+                    $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
+                    if (!employeeId || employeeId === "" || employeeId === "default-employee-id") {
+                        fetchEmployeeId();
+                    }
                 }
             });
 
-            // Đóng cửa sổ chat
             $('#close-chat').on('click', function () {
-                $('#chat-window').hide();
+                $('#customer-chat').removeClass('active');
             });
+
+            $('#retry-button').on('click', function () {
+                $('#retry-button').hide();
+                showError("🔄 Đang tìm nhân viên hỗ trợ...");
+                fetchEmployeeId();
+            });
+
+            $('#send-button').on('click', function () {
+                const message = $('#message-input').val().trim();
+                if (!message) {
+                    showError("⚠ Vui lòng nhập nội dung!");
+                    return;
+                }
+
+                if (connection.state !== signalR.HubConnectionState.Connected) {
+                    showError("❌ Kết nối không hoạt động. Vui lòng thử lại sau.");
+                    return;
+                }
+
+                if (!employeeId || employeeId === "" || employeeId === "default-employee-id") {
+                    showError("⚠ Không tìm thấy nhân viên hỗ trợ. <a href='#' class='retry-link'>Thử lại?</a>");
+                    $('#retry-button').show();
+                    $('.retry-link').off('click').on('click', function (e) {
+                        e.preventDefault();
+                        $('#retry-button').click();
+                    });
+                    fetchEmployeeId();
+                    return;
+                }
+
+                console.log(`Gửi tin nhắn tới ${employeeId}: ${message}`);
+                showMessage(currentUserId, 'Bạn', message, true); // Hiển thị ngay lập tức
+                connection.invoke("SendPrivateMessage", activemployeeId, message)
+                    .then(() => {
+                        $('#message-input').val('');
+                    })
+                    .catch(err => {
+                        console.error("Lỗi gửi:", err.toString());
+                        showError(`🚫 Gửi thất bại: ${err.message}`);
+                    });
+            });
+
+            $('#message-input').on('keypress', function (e) {
+                if (e.key === "Enter") {
+                    $('#send-button').click();
+                }
+            });
+
+            // Khởi tạo kết nối SignalR
+            connection.start()
+                .then(() => {
+                    console.log("✅ SignalR kết nối thành công");
+                    if (!employeeId || employeeId === "" || employeeId === "default-employee-id") {
+                        fetchEmployeeId();
+                    } else {
+                        $('#send-button').prop('disabled', false);
+                        showMessage(null, 'Hệ thống', 'Đã kết nối với nhân viên hỗ trợ.', false);
+                    }
+                })
+                .catch(err => {
+                    console.error("❌ Không thể kết nối:", err.toString());
+                    showError("❌ Lỗi: Không thể kết nối đến máy chủ. <a href='#' class='retry-link'>Thử lại?</a>");
+                    $('#send-button').prop('disabled', true);
+                    $('#retry-button').show();
+                    $('.retry-link').off('click').on('click', function (e) {
+                        e.preventDefault();
+                        $('#retry-button').click();
+                    });
+                });
+
+            // Carousel sản phẩm nổi bật
+            const $productWrapper = $('.products-wrapper');
+            const $productItems = $('.product-item');
+            const productItemWidth = $productItems.length > 0 ? $productItems.outerWidth(true) : 0;
+            const productVisibleItems = 4;
+            const productTotalItems = $productItems.length;
+            let productCurrentPosition = 0;
+            const productMaxPosition = Math.max(0, productTotalItems - productVisibleItems);
+
+            if (productTotalItems <= productVisibleItems || productTotalItems === 0) {
+                $('.products-prev, .products-next').hide();
+            } else {
+                $('.products-prev, .products-next').show();
+            }
+
+            $('.products-next').click(function () {
+                if (productCurrentPosition < productMaxPosition) {
+                    productCurrentPosition++;
+                    $productWrapper.css('transform', `translateX(-${productCurrentPosition * productItemWidth}px)`);
+                }
+            });
+
+            $('.products-prev').click(function () {
+                if (productCurrentPosition > 0) {
+                    productCurrentPosition--;
+                    $productWrapper.css('transform', `translateX(-${productCurrentPosition * productItemWidth}px)`);
+                }
+            });
+
+            // Thêm vào giỏ hàng
+            $('.add-to-cart').on('click', function () {
+                const productId = $(this).data('product-id');
+                const sizeId = $('#size-' + productId).val();
+
+                if (!sizeId) {
+                    showToast('Vui lòng chọn kích thước trước khi thêm vào giỏ hàng!', false);
+                    return;
+                }
+
+                showLoading();
+
+                $.ajax({
+                    url: '@Url.Action("AddToCart", "Cart")',
+                    type: 'POST',
+                    data: {
+                        productId: productId,
+                        sizeId: sizeId,
+                        colorId: null,
+                        quantity: 1,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (response) {
+                        hideLoading();
+                        if (response.success) {
+                            showToast(response.message, true);
+                            $('#cartCount').text(`Cart (${response.cartCount})`);
+                            $(document).trigger('cart-updated');
+                        } else {
+                            showToast(response.message, false);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        hideLoading();
+                        showToast('Đã có lỗi xảy ra: ' + error, false);
+                        console.log('AJAX error:', xhr.responseText);
+                    }
+                });
+            });
+
+            function showLoading() {
+                $('#loadingOverlay').fadeIn(200);
+            }
+
+            function hideLoading() {
+                $('#loadingOverlay').fadeOut(200);
+            }
         });
     </script>
 }
