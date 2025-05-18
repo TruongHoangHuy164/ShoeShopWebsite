@@ -78,6 +78,29 @@ namespace ShoeShopWebsite.Migrations
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
                     b.ToTable("AspNetRoles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "b1d1f35e-7d18-4a17-b88a-c8e1e8d9a210",
+                            ConcurrencyStamp = "f21a49e8-5e1a-4234-9f92-0f430f0a1467",
+                            Name = "Admin",
+                            NormalizedName = "ADMIN"
+                        },
+                        new
+                        {
+                            Id = "dd76877a-4e07-4d84-a55f-c94a1d4f45a3",
+                            ConcurrencyStamp = "cd17c4b9-11b9-41bc-9b72-6f4e0deee5a4",
+                            Name = "Employee",
+                            NormalizedName = "EMPLOYEE"
+                        },
+                        new
+                        {
+                            Id = "3a6f9f49-309f-4e11-8f44-c75fcb0b9e89",
+                            ConcurrencyStamp = "02a02f43-81f4-48dd-bb13-37db2347c18f",
+                            Name = "Customer",
+                            NormalizedName = "CUSTOMER"
+                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -398,6 +421,49 @@ namespace ShoeShopWebsite.Migrations
                     b.HasKey("ColorID");
 
                     b.ToTable("Colors");
+                });
+
+            modelBuilder.Entity("ShoeShopWebsite.Models.DiscountCode", b =>
+                {
+                    b.Property<int>("DiscountCodeID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DiscountCodeID"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("DiscountType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("DiscountValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("ExpiryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MaxUsage")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("MinOrderValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UsageCount")
+                        .HasColumnType("int");
+
+                    b.HasKey("DiscountCodeID");
+
+                    b.ToTable("DiscountCodes");
                 });
 
             modelBuilder.Entity("ShoeShopWebsite.Models.Order", b =>

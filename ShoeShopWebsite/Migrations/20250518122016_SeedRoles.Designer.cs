@@ -12,8 +12,8 @@ using ShoeShopWebsite.Models;
 namespace ShoeShopWebsite.Migrations
 {
     [DbContext(typeof(NikeShopDbContext))]
-    [Migration("20250329102706_AddIdentity")]
-    partial class AddIdentity
+    [Migration("20250518122016_SeedRoles")]
+    partial class SeedRoles
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,37 @@ namespace ShoeShopWebsite.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("District", b =>
+                {
+                    b.Property<int>("Code")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("Relational:JsonPropertyName", "code");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Code"));
+
+                    b.Property<string>("DivisionType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("Relational:JsonPropertyName", "division_type");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("Relational:JsonPropertyName", "name");
+
+                    b.Property<int>("ProvinceId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Code");
+
+                    b.HasIndex("ProvinceId");
+
+                    b.ToTable("Districts");
+
+                    b.HasAnnotation("Relational:JsonPropertyName", "districts");
+                });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
@@ -50,6 +81,29 @@ namespace ShoeShopWebsite.Migrations
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
                     b.ToTable("AspNetRoles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "b1d1f35e-7d18-4a17-b88a-c8e1e8d9a210",
+                            ConcurrencyStamp = "f21a49e8-5e1a-4234-9f92-0f430f0a1467",
+                            Name = "Admin",
+                            NormalizedName = "ADMIN"
+                        },
+                        new
+                        {
+                            Id = "dd76877a-4e07-4d84-a55f-c94a1d4f45a3",
+                            ConcurrencyStamp = "cd17c4b9-11b9-41bc-9b72-6f4e0deee5a4",
+                            Name = "Employee",
+                            NormalizedName = "EMPLOYEE"
+                        },
+                        new
+                        {
+                            Id = "3a6f9f49-309f-4e11-8f44-c75fcb0b9e89",
+                            ConcurrencyStamp = "02a02f43-81f4-48dd-bb13-37db2347c18f",
+                            Name = "Customer",
+                            NormalizedName = "CUSTOMER"
+                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -166,6 +220,9 @@ namespace ShoeShopWebsite.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DetailID"));
 
+                    b.Property<int?>("ColorID")
+                        .HasColumnType("int");
+
                     b.Property<int>("OrderID")
                         .HasColumnType("int");
 
@@ -183,6 +240,8 @@ namespace ShoeShopWebsite.Migrations
 
                     b.HasKey("DetailID");
 
+                    b.HasIndex("ColorID");
+
                     b.HasIndex("OrderID");
 
                     b.HasIndex("ProductID");
@@ -190,6 +249,30 @@ namespace ShoeShopWebsite.Migrations
                     b.HasIndex("SizeID");
 
                     b.ToTable("OrderDetails");
+                });
+
+            modelBuilder.Entity("Province", b =>
+                {
+                    b.Property<int>("Code")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("Relational:JsonPropertyName", "code");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Code"));
+
+                    b.Property<string>("DivisionType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("Relational:JsonPropertyName", "division_type");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("Relational:JsonPropertyName", "name");
+
+                    b.HasKey("Code");
+
+                    b.ToTable("Provinces");
                 });
 
             modelBuilder.Entity("ShoeShopWebsite.Models.ApplicationUser", b =>
@@ -343,6 +426,49 @@ namespace ShoeShopWebsite.Migrations
                     b.ToTable("Colors");
                 });
 
+            modelBuilder.Entity("ShoeShopWebsite.Models.DiscountCode", b =>
+                {
+                    b.Property<int>("DiscountCodeID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DiscountCodeID"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("DiscountType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("DiscountValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("ExpiryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MaxUsage")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("MinOrderValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UsageCount")
+                        .HasColumnType("int");
+
+                    b.HasKey("DiscountCodeID");
+
+                    b.ToTable("DiscountCodes");
+                });
+
             modelBuilder.Entity("ShoeShopWebsite.Models.Order", b =>
                 {
                     b.Property<int>("OrderID")
@@ -351,18 +477,35 @@ namespace ShoeShopWebsite.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderID"));
 
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SessionId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("TotalPrice")
                         .HasColumnType("decimal(18,2)");
@@ -548,6 +691,48 @@ namespace ShoeShopWebsite.Migrations
                     b.ToTable("Wishlist");
                 });
 
+            modelBuilder.Entity("Ward", b =>
+                {
+                    b.Property<int>("Code")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("Relational:JsonPropertyName", "code");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Code"));
+
+                    b.Property<int>("DistrictId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DivisionType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("Relational:JsonPropertyName", "division_type");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("Relational:JsonPropertyName", "name");
+
+                    b.HasKey("Code");
+
+                    b.HasIndex("DistrictId");
+
+                    b.ToTable("Wards");
+
+                    b.HasAnnotation("Relational:JsonPropertyName", "wards");
+                });
+
+            modelBuilder.Entity("District", b =>
+                {
+                    b.HasOne("Province", "Province")
+                        .WithMany("Districts")
+                        .HasForeignKey("ProvinceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Province");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -601,6 +786,11 @@ namespace ShoeShopWebsite.Migrations
 
             modelBuilder.Entity("OrderDetail", b =>
                 {
+                    b.HasOne("ShoeShopWebsite.Models.Color", "Color")
+                        .WithMany()
+                        .HasForeignKey("ColorID")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("ShoeShopWebsite.Models.Order", "Order")
                         .WithMany("OrderDetails")
                         .HasForeignKey("OrderID")
@@ -618,6 +808,8 @@ namespace ShoeShopWebsite.Migrations
                         .HasForeignKey("SizeID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Color");
 
                     b.Navigation("Order");
 
@@ -731,6 +923,27 @@ namespace ShoeShopWebsite.Migrations
                         .IsRequired();
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Ward", b =>
+                {
+                    b.HasOne("District", "District")
+                        .WithMany("Wards")
+                        .HasForeignKey("DistrictId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("District");
+                });
+
+            modelBuilder.Entity("District", b =>
+                {
+                    b.Navigation("Wards");
+                });
+
+            modelBuilder.Entity("Province", b =>
+                {
+                    b.Navigation("Districts");
                 });
 
             modelBuilder.Entity("ShoeShopWebsite.Models.Category", b =>

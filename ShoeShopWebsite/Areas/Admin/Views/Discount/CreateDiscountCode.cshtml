@@ -1,0 +1,219 @@
+﻿@model ShoeShopWebsite.Models.DiscountCode
+@{
+    ViewData["Title"] = "Thêm mã giảm giá - ShoeShopWebsite";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container product-list-container">
+    <h1>Thêm mã giảm giá</h1>
+
+    <!-- Alerts -->
+    <div class="alert-container">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+        }
+    </div>
+
+    <div class="admin-product-list">
+        <form asp-action="CreateDiscountCode" method="post" class="needs-validation" novalidate>
+            @Html.AntiForgeryToken()
+
+            <div class="mb-3">
+                <label asp-for="Code" class="form-label">Mã giảm giá</label>
+                <input asp-for="Code" class="form-control" required />
+                <span asp-validation-for="Code" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="DiscountType" class="form-label">Loại giảm giá</label>
+                <select asp-for="DiscountType" class="form-select" required>
+                    <option value="" disabled selected>Chọn loại giảm giá</option>
+                    <option value="Percentage">Phần trăm</option>
+                    <option value="Fixed">Số tiền cố định</option>
+                </select>
+                <span asp-validation-for="DiscountType" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="DiscountValue" class="form-label">Giá trị giảm giá</label>
+                <input asp-for="DiscountValue" class="form-control" type="number" step="0.01" required />
+                <span asp-validation-for="DiscountValue" class="text-danger"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="StartDate" class="form-label">Ngày bắt đầu</label>
+                    <input asp-for="StartDate" class="form-control" type="date" required />
+                    <span asp-validation-for="StartDate" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="ExpiryDate" class="form-label">Ngày hết hạn</label>
+                    <input asp-for="ExpiryDate" class="form-control" type="date" required />
+                    <span asp-validation-for="ExpiryDate" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="MaxUsage" class="form-label">Số lần sử dụng tối đa</label>
+                <input asp-for="MaxUsage" class="form-control" type="number" required />
+                <span asp-validation-for="MaxUsage" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="MinOrderValue" class="form-label">Giá trị đơn hàng tối thiểu</label>
+                <input asp-for="MinOrderValue" class="form-control" type="number" step="0.01" required />
+                <span asp-validation-for="MinOrderValue" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3 form-check">
+                <input asp-for="IsActive" class="form-check-input" type="checkbox" checked />
+                <label asp-for="IsActive" class="form-check-label">Kích hoạt</label>
+                <span asp-validation-for="IsActive" class="text-danger"></span>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <a href="@Url.Action("AdminDashboard", "Admin")" class="btn btn-back">Quay lại Dashboard</a>
+                <button type="submit" class="btn btn-add">
+                    <i class="fas fa-save me-1"></i> Thêm mã
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        .product-list-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            font-size: 28px;
+            color: #333333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #E0E0E0;
+            padding-bottom: 10px;
+        }
+
+        .form-label {
+            color: #333333;
+            font-weight: 500;
+        }
+
+        .form-control, .form-select {
+            border: 1px solid #E0E0E0;
+            border-radius: 4px;
+            padding: 12px;
+            font-size: 14px;
+            color: #666666;
+        }
+
+            .form-control:focus, .form-select:focus {
+                border-color: #2196F3;
+                box-shadow: 0 0 5px rgba(33, 150, 243, 0.3);
+            }
+
+        .form-check-label {
+            color: #666666;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+            display: inline-block;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-add {
+            background-color: #3b82f6;
+            color: #FFFFFF;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: 500;
+            border: none;
+        }
+
+            .btn-add:hover {
+                background-color: #2563eb;
+            }
+
+        .btn-back {
+            background-color: #E0E0E0;
+            color: #333333;
+            padding: 10px 20px;
+            border-radius: 4px;
+        }
+
+            .btn-back:hover {
+                background-color: #D0D0D0;
+            }
+
+        .alert-container {
+            margin-bottom: 20px;
+        }
+
+        .alert {
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background-color: #dff0d8;
+            color: #3c763d;
+            border: 1px solid #d6e9c6;
+        }
+
+        .alert-danger {
+            background-color: #f2dede;
+            color: #a94442;
+            border: 1px solid #ebccd1;
+        }
+
+        .text-danger {
+            font-size: 13px;
+            color: #F44336;
+        }
+    </style>
+}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" ... />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#DiscountType').change(function () {
+            var discountType = $(this).val();
+            var $discountValue = $('#DiscountValue');
+            if (discountType === 'Percentage') {
+                $discountValue.attr('max', 100);
+                $discountValue.attr('min', 0);
+            } else {
+                $discountValue.removeAttr('max');
+                $discountValue.attr('min', 0);
+            }
+        });
+
+        $('#ExpiryDate').change(function () {
+            var startDate = new Date($('#StartDate').val());
+            var expiryDate = new Date($(this).val());
+            if (expiryDate < startDate) {
+                $(this).get(0).setCustomValidity('Ngày hết hạn phải lớn hơn hoặc bằng ngày bắt đầu.');
+            } else {
+                $(this).get(0).setCustomValidity('');
+            }
+        });
+    });
+</script>

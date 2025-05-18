@@ -12,8 +12,8 @@ using ShoeShopWebsite.Models;
 namespace ShoeShopWebsite.Migrations
 {
     [DbContext(typeof(NikeShopDbContext))]
-    [Migration("20250331100911_RemoveUserIdFromCart")]
-    partial class RemoveUserIdFromCart
+    [Migration("20250518114850_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,37 @@ namespace ShoeShopWebsite.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("District", b =>
+                {
+                    b.Property<int>("Code")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("Relational:JsonPropertyName", "code");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Code"));
+
+                    b.Property<string>("DivisionType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("Relational:JsonPropertyName", "division_type");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("Relational:JsonPropertyName", "name");
+
+                    b.Property<int>("ProvinceId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Code");
+
+                    b.HasIndex("ProvinceId");
+
+                    b.ToTable("Districts");
+
+                    b.HasAnnotation("Relational:JsonPropertyName", "districts");
+                });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
@@ -197,6 +228,30 @@ namespace ShoeShopWebsite.Migrations
                     b.ToTable("OrderDetails");
                 });
 
+            modelBuilder.Entity("Province", b =>
+                {
+                    b.Property<int>("Code")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("Relational:JsonPropertyName", "code");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Code"));
+
+                    b.Property<string>("DivisionType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("Relational:JsonPropertyName", "division_type");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("Relational:JsonPropertyName", "name");
+
+                    b.HasKey("Code");
+
+                    b.ToTable("Provinces");
+                });
+
             modelBuilder.Entity("ShoeShopWebsite.Models.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
@@ -348,6 +403,49 @@ namespace ShoeShopWebsite.Migrations
                     b.ToTable("Colors");
                 });
 
+            modelBuilder.Entity("ShoeShopWebsite.Models.DiscountCode", b =>
+                {
+                    b.Property<int>("DiscountCodeID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DiscountCodeID"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("DiscountType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("DiscountValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("ExpiryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MaxUsage")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("MinOrderValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UsageCount")
+                        .HasColumnType("int");
+
+                    b.HasKey("DiscountCodeID");
+
+                    b.ToTable("DiscountCodes");
+                });
+
             modelBuilder.Entity("ShoeShopWebsite.Models.Order", b =>
                 {
                     b.Property<int>("OrderID")
@@ -356,28 +454,40 @@ namespace ShoeShopWebsite.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderID"));
 
-                    b.Property<int?>("ColorID")
-                        .HasColumnType("int");
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SessionId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("TotalPrice")
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("OrderID");
-
-                    b.HasIndex("ColorID");
 
                     b.ToTable("Orders");
                 });
@@ -558,6 +668,48 @@ namespace ShoeShopWebsite.Migrations
                     b.ToTable("Wishlist");
                 });
 
+            modelBuilder.Entity("Ward", b =>
+                {
+                    b.Property<int>("Code")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("Relational:JsonPropertyName", "code");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Code"));
+
+                    b.Property<int>("DistrictId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DivisionType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("Relational:JsonPropertyName", "division_type");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("Relational:JsonPropertyName", "name");
+
+                    b.HasKey("Code");
+
+                    b.HasIndex("DistrictId");
+
+                    b.ToTable("Wards");
+
+                    b.HasAnnotation("Relational:JsonPropertyName", "wards");
+                });
+
+            modelBuilder.Entity("District", b =>
+                {
+                    b.HasOne("Province", "Province")
+                        .WithMany("Districts")
+                        .HasForeignKey("ProvinceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Province");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -668,16 +820,6 @@ namespace ShoeShopWebsite.Migrations
                     b.Navigation("Size");
                 });
 
-            modelBuilder.Entity("ShoeShopWebsite.Models.Order", b =>
-                {
-                    b.HasOne("ShoeShopWebsite.Models.Color", "Color")
-                        .WithMany()
-                        .HasForeignKey("ColorID")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Color");
-                });
-
             modelBuilder.Entity("ShoeShopWebsite.Models.Product", b =>
                 {
                     b.HasOne("ShoeShopWebsite.Models.Category", "Category")
@@ -758,6 +900,27 @@ namespace ShoeShopWebsite.Migrations
                         .IsRequired();
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Ward", b =>
+                {
+                    b.HasOne("District", "District")
+                        .WithMany("Wards")
+                        .HasForeignKey("DistrictId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("District");
+                });
+
+            modelBuilder.Entity("District", b =>
+                {
+                    b.Navigation("Wards");
+                });
+
+            modelBuilder.Entity("Province", b =>
+                {
+                    b.Navigation("Districts");
                 });
 
             modelBuilder.Entity("ShoeShopWebsite.Models.Category", b =>
