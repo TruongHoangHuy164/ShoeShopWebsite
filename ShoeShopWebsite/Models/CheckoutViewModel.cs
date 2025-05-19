@@ -29,5 +29,7 @@ namespace ShoeShopWebsite.Models
 
         [Required(ErrorMessage = "Phương thức thanh toán là bắt buộc.")]
         public string? PaymentMethod { get; set; }
+        public string DiscountCode { get; set; }
+        public decimal? DiscountAmount { get; set; }
     }
 }

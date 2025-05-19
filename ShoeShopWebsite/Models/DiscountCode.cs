@@ -11,15 +11,16 @@ namespace ShoeShopWebsite.Models
         [StringLength(50, ErrorMessage = "Mã giảm giá không được vượt quá 50 ký tự.")]
         public string Code { get; set; }
 
+        [Required(ErrorMessage = "Loại giảm giá là bắt buộc.")]
+        public DiscountTypeEnum DiscountType { get; set; }
+
         [Required(ErrorMessage = "Giá trị giảm giá là bắt buộc.")]
-        [Range(0, double.MaxValue, ErrorMessage = "Giá trị giảm giá phải từ 0 đến 100% hoặc số tiền cố định.")]
         public decimal DiscountValue { get; set; }
 
-        [Required(ErrorMessage = "Loại giảm giá là bắt buộc.")]
-        public string DiscountType { get; set; } // "Percentage" hoặc "Fixed"
-
+        [Required(ErrorMessage = "Ngày bắt đầu là bắt buộc.")]
         public DateTime StartDate { get; set; }
 
+        [Required(ErrorMessage = "Ngày hết hạn là bắt buộc.")]
         public DateTime ExpiryDate { get; set; }
 
         [Range(0, int.MaxValue, ErrorMessage = "Số lần sử dụng tối đa phải là số không âm.")]
@@ -29,7 +30,13 @@ namespace ShoeShopWebsite.Models
 
         [Range(0, double.MaxValue, ErrorMessage = "Giá trị đơn hàng tối thiểu phải là số không âm.")]
         public decimal MinOrderValue { get; set; }
-        /// [Required(ErrorMessage = "Trạng thái là bắt buộc.")]    
+
         public bool IsActive { get; set; } = true;
+    }
+
+    public enum DiscountTypeEnum
+    {
+        Percentage, 
+        Fixed
     }
 }

@@ -1,12 +1,12 @@
 ﻿@using ShoeShopWebsite.Models
 @model ShoeShopWebsite.Models.DiscountCode
 @{
-    ViewData["Title"] = "Thêm mã giảm giá - ShoeShopWebsite";
+    ViewData["Title"] = "Sửa mã giảm giá - ShoeShopWebsite";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
 <div class="container my-5">
-    <h1 class="mb-4">Thêm mã giảm giá</h1>
+    <h1 class="mb-4">Sửa mã giảm giá</h1>
 
     <!-- Alerts -->
     <div class="alert-container mb-4">
@@ -38,7 +38,7 @@
             </div>
         }
         <div id="clientErrors" class="alert alert-danger alert-dismissible fade show d-none" role="alert">
-            <strong>Lỗi nhập liệu từ client:</strong>
+            <strong>Lỗi nhập liệu từ client hoặc server:</strong>
             <ul id="clientErrorList" class="mb-0"></ul>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
@@ -46,19 +46,21 @@
 
     <div class="card shadow-sm">
         <div class="card-body">
-            <form asp-area="Admin" asp-controller="Discount" asp-action="CreateDiscountCode" method="post" id="discountForm">
+            <form id="discountForm" method="post">
                 @Html.AntiForgeryToken()
+                <input type="hidden" name="DiscountCodeID" value="@Model.DiscountCodeID" />
 
+                <!-- Các trường input giữ nguyên như cũ -->
                 <div class="mb-3">
                     <label asp-for="Code" class="form-label fw-medium">Mã giảm giá</label>
-                    <input asp-for="Code" name="Code" class="form-control" maxlength="50" placeholder="Nhập mã (ví dụ: SALE2025)" value="@Model.Code" />
+                    <input asp-for="Code" name="Code" class="form-control" maxlength="50" placeholder="Nhập mã (ví dụ: SALE2025)" value="@Model.Code" readonly />
                     <span asp-validation-for="Code" class="text-danger"></span>
                 </div>
 
                 <div class="mb-3">
                     <label asp-for="DiscountType" class="form-label fw-medium">Loại giảm giá</label>
                     <select asp-for="DiscountType" name="DiscountType" class="form-select" id="DiscountType">
-                        <option value="" disabled @(Model.DiscountType == null ? "selected" : "")>Chọn loại giảm giá</option>
+                        <option value="" disabled>Chọn loại giảm giá</option>
                         <option value="0" @(Model.DiscountType == DiscountTypeEnum.Percentage ? "selected" : "")>Phần trăm</option>
                         <option value="1" @(Model.DiscountType == DiscountTypeEnum.Fixed ? "selected" : "")>Số tiền cố định</option>
                     </select>
@@ -68,8 +70,7 @@
                 <div class="mb-3">
                     <label asp-for="DiscountValue" class="form-label fw-medium">Giá trị giảm giá</label>
                     <input asp-for="DiscountValue" name="DiscountValue" class="form-control" type="number" step="0.01" min="0" id="DiscountValue" placeholder="Nhập giá trị" value="@Model.DiscountValue" />
-                    <span asp-validation-for="DiscountValue" class="text-danger"></span>
-                    <div class="invalid-feedback" id="discountValueFeedback">Vui lòng nhập giá trị hợp lệ.</div>
+                    <span asp-validation-for="DiscountValue" class="text-danger" id="discountValueFeedback"></span>
                 </div>
 
                 <div class="row">
@@ -105,9 +106,9 @@
                 </div>
 
                 <div class="d-flex justify-content-end gap-2">
-                    <a href="@Url.Action("ListDiscountCodes", "Discount")" class="btn btn-secondary">Quay lại</a>
+                    <a href="@Url.Action("ListDiscountCodes", "Discount")" class="btn btn-secondary">Quay lại danh sách</a>
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-2"></i>Thêm mã
+                        <i class="fas fa-save me-2"></i>Lưu thay đổi
                     </button>
                 </div>
             </form>
@@ -180,6 +181,17 @@
             #clientErrors.show {
                 display: block;
             }
+
+        .form-control[readonly] {
+            background-color: #e9ecef;
+            opacity: 1;
+        }
+
+        .text-danger {
+            display: block;
+            font-size: 0.875rem;
+            color: #dc3545;
+        }
     </style>
 }
 
@@ -199,52 +211,45 @@
             const clientErrors = $('#clientErrors');
             const clientErrorList = $('#clientErrorList');
 
-            // Debug form submission
-            form.on('submit', function (e) {
-                console.log('Form submitting to: ' + (form.attr('action') || 'undefined') + ' with method: ' + form.attr('method'));
-                console.log('Form data: ', form.serialize());
-                console.log('DiscountType value:', discountType.val());
-                console.log('MaxUsage value:', maxUsage.val());
-                console.log('MinOrderValue value:', minOrderValue.val());
+            // Kiểm tra ID mã giảm giá
+            if (!@Model.DiscountCodeID) {
+                clientErrorList.append('<li>ID mã giảm giá không hợp lệ.</li>');
+                clientErrors.removeClass('d-none').addClass('show');
+                form.find('button[type="submit"]').prop('disabled', true);
+                return;
+            }
 
-                // Reset lỗi client-side
+            // Submit form
+            form.on('submit', function (e) {
+                e.preventDefault();
                 clientErrors.addClass('d-none').removeClass('show');
                 clientErrorList.empty();
 
-                // Danh sách lỗi
                 const errors = [];
 
-                // Kiểm tra các trường
+                // Client-side validation
                 const discountTypeVal = discountType.val();
                 if (!discountTypeVal || discountTypeVal === '') {
                     errors.push('Vui lòng chọn loại giảm giá.');
-                    console.log('DiscountType validation failed:', discountTypeVal);
                 }
 
                 const maxUsageVal = maxUsage.val();
                 if (!maxUsageVal || parseInt(maxUsageVal) < 0 || isNaN(parseInt(maxUsageVal))) {
                     errors.push('Vui lòng nhập số lần sử dụng tối đa hợp lệ.');
-                    console.log('MaxUsage validation failed:', maxUsageVal);
                 }
 
                 const minOrderVal = minOrderValue.val();
                 if (!minOrderVal || parseFloat(minOrderVal) < 0 || isNaN(parseFloat(minOrderVal))) {
                     errors.push('Vui lòng nhập giá trị đơn hàng tối thiểu hợp lệ.');
-                    console.log('MinOrderValue validation failed:', minOrderVal);
                 }
 
-                const type = discountTypeVal;
                 const value = parseFloat(discountValue.val());
-                if (type === '0' && (value <= 0 || value > 100)) {
+                if (isNaN(value)) {
+                    errors.push('Giá trị giảm giá phải là một số hợp lệ.');
+                } else if (discountTypeVal === '0' && (value <= 0 || value > 100)) {
                     errors.push('Giá trị giảm giá phải từ 0 đến 100% khi chọn loại Phần trăm.');
-                    discountValue[0].setCustomValidity('Invalid');
-                    $('#discountValueFeedback').text('Giá trị giảm giá phải từ 0 đến 100%.');
-                } else if (type === '1' && value <= 0) {
+                } else if (discountTypeVal === '1' && value <= 0) {
                     errors.push('Giá trị giảm giá phải lớn hơn 0 khi chọn loại Số tiền cố định.');
-                    discountValue[0].setCustomValidity('Invalid');
-                    $('#discountValueFeedback').text('Giá trị giảm giá phải lớn hơn 0.');
-                } else {
-                    discountValue[0].setCustomValidity('');
                 }
 
                 const start = new Date(startDate.val());
@@ -253,58 +258,55 @@
                 today.setHours(0, 0, 0, 0);
                 if (start < today) {
                     errors.push('Ngày bắt đầu không được nhỏ hơn ngày hiện tại.');
-                    startDate[0].setCustomValidity('Invalid');
-                    startDate.next('.text-danger').text('Ngày bắt đầu không được nhỏ hơn ngày hiện tại.');
-                } else {
-                    startDate[0].setCustomValidity('');
-                    startDate.next('.text-danger').text('');
                 }
 
                 if (start && expiry && expiry < start) {
                     errors.push('Ngày hết hạn phải lớn hơn hoặc bằng ngày bắt đầu.');
-                    expiryDate[0].setCustomValidity('Invalid');
-                    expiryDate.next('.text-danger').text('Ngày hết hạn phải lớn hơn hoặc bằng ngày bắt đầu.');
-                } else {
-                    expiryDate[0].setCustomValidity('');
-                    expiryDate.next('.text-danger').text('');
                 }
 
                 if (errors.length > 0) {
-                    e.preventDefault();
-                    e.stopPropagation();
                     errors.forEach(error => clientErrorList.append(`<li>${error}</li>`));
                     clientErrors.removeClass('d-none').addClass('show');
-                    console.log('Form validation failed. Errors:', errors);
-                    return false;
+                    return;
                 }
 
-                // Gửi AJAX để debug response
-                e.preventDefault();
+                // Submit form via AJAX
+                const url = '@Url.Action("UpdateDiscountCode", "Discount", new { id = Model.DiscountCodeID })';
                 $.ajax({
-                    url: form.attr('action'),
+                    url: url,
                     type: 'POST',
                     data: form.serialize(),
                     success: function (response) {
-                        console.log('Server response:', response);
-                        if (response.redirectUrl) {
-                            window.location.href = response.redirectUrl;
+                        if (response.success) {
+                            // Chuyển hướng về danh sách với thông báo thành công
+                            window.location.href = '@Url.Action("ListDiscountCodes", "Discount")';
                         } else {
-                            $('body').html(response);
+                            clientErrorList.empty();
+                            if (response.errors && Array.isArray(response.errors)) {
+                                response.errors.forEach(error => clientErrorList.append(`<li>${error}</li>`));
+                            } else {
+                                clientErrorList.append(`<li>${response.error || 'Lỗi không xác định khi cập nhật.'}</li>`);
+                            }
+                            clientErrors.removeClass('d-none').addClass('show');
                         }
                     },
                     error: function (xhr, status, error) {
-                        console.error('AJAX error:', status, error, xhr.responseText);
-                        clientErrorList.append(`<li>Lỗi server: ${xhr.status} ${error}</li>`);
+                        console.log('AJAX Error:', xhr.responseText);
+                        let errorMessage = 'Lỗi server: ' + xhr.status + ' - ' + error;
+                        if (xhr.status === 404) {
+                            errorMessage = xhr.responseJSON?.error || 'Không tìm thấy mã giảm giá.';
+                        }
+                        clientErrorList.append(`<li>${errorMessage}</li>`);
                         clientErrors.removeClass('d-none').addClass('show');
                     }
                 });
             });
 
+            // Dynamic updates based on discount type
             discountType.on('change', function () {
                 const type = $(this).val();
                 const feedback = $('#discountValueFeedback');
                 feedback.text('');
-                discountValue[0].setCustomValidity('');
                 if (type === '0') {
                     discountValue.attr('max', 100).attr('min', 0).attr('placeholder', 'Nhập phần trăm (0-100)');
                     if (parseFloat(discountValue.val()) > 100) {
@@ -322,18 +324,15 @@
                 const value = parseFloat($(this).val());
                 const type = discountType.val();
                 const feedback = $('#discountValueFeedback');
-                if (!type) {
+                feedback.text('');
+                if (isNaN(value)) {
+                    feedback.text('Vui lòng nhập một số hợp lệ.');
+                } else if (!type) {
                     feedback.text('Vui lòng chọn loại giảm giá trước.');
-                    $(this)[0].setCustomValidity('Invalid');
                 } else if (type === '0' && (value <= 0 || value > 100)) {
                     feedback.text('Giá trị giảm giá phải từ 0 đến 100% khi chọn loại Phần trăm.');
-                    $(this)[0].setCustomValidity('Invalid');
                 } else if (type === '1' && value <= 0) {
                     feedback.text('Giá trị giảm giá phải lớn hơn 0 khi chọn loại Số tiền cố định.');
-                    $(this)[0].setCustomValidity('Invalid');
-                } else {
-                    feedback.text('');
-                    $(this)[0].setCustomValidity('');
                 }
             });
 
@@ -343,17 +342,12 @@
                 const start = new Date($(this).val());
                 const expiry = new Date(expiryDate.val());
                 if (start < new Date(today)) {
-                    $(this)[0].setCustomValidity('Invalid');
                     $(this).next('.text-danger').text('Ngày bắt đầu không được nhỏ hơn ngày hiện tại.');
                 } else if (start && expiry && expiry < start) {
-                    expiryDate[0].setCustomValidity('Invalid');
                     expiryDate.next('.text-danger').text('Ngày hết hạn phải lớn hơn hoặc bằng ngày bắt đầu.');
-                    $(this)[0].setCustomValidity('');
                     $(this).next('.text-danger').text('');
                 } else {
-                    $(this)[0].setCustomValidity('');
                     $(this).next('.text-danger').text('');
-                    expiryDate[0].setCustomValidity('');
                     expiryDate.next('.text-danger').text('');
                 }
             });
@@ -362,10 +356,8 @@
                 const start = new Date(startDate.val());
                 const expiry = new Date($(this).val());
                 if (start && expiry && expiry < start) {
-                    $(this)[0].setCustomValidity('Invalid');
                     $(this).next('.text-danger').text('Ngày hết hạn phải lớn hơn hoặc bằng ngày bắt đầu.');
                 } else {
-                    $(this)[0].setCustomValidity('');
                     $(this).next('.text-danger').text('');
                 }
             });
@@ -374,17 +366,14 @@
                 const value = parseFloat($(this).val());
                 const feedback = $(this).next('.text-danger');
                 if (value < 0 || isNaN(value)) {
-                    $(this)[0].setCustomValidity('Invalid');
                     feedback.text($(this).attr('id') === 'MaxUsage' ? 'Số lần sử dụng tối đa không được nhỏ hơn 0.' : 'Giá trị đơn hàng tối thiểu không được nhỏ hơn 0.');
                 } else {
-                    $(this)[0].setCustomValidity('');
                     feedback.text('');
                 }
             });
 
             form.find('input, select').on('input change', function () {
                 $(this).next('.text-danger').text('');
-                $(this)[0].setCustomValidity('');
                 clientErrors.addClass('d-none').removeClass('show');
                 clientErrorList.empty();
             });

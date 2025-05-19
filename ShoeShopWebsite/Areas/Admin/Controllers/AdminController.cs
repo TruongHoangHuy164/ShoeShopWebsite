@@ -33,21 +33,75 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
             _roleManager = roleManager ?? throw new ArgumentNullException(nameof(roleManager));
         }
 
-        // GET: /Admin/Dashboard
         [HttpGet]
         [Route("AdminDashboard")]
         public async Task<IActionResult> AdminDashboard()
         {
-            var stats = new
+            var stats = new AdminDashboardViewModel
             {
                 TotalUsers = await _userManager.Users.CountAsync(),
                 TotalProducts = await _context.Products.CountAsync(),
                 TotalOrders = await _context.Orders.CountAsync(),
-                TotalRevenue = await _context.Orders.Where(o => o.Status == "Completed").SumAsync(o => o.TotalPrice)
+                TotalRevenue = await _context.Orders.Where(o => o.Status == "Completed").SumAsync(o => o.TotalPrice),
+                MonthlyRevenue = await GetMonthlyRevenue(),
+                CategoryRevenueData = await GetCategoryRevenue(),
+                DiscountCodeCount = await _context.DiscountCodes.CountAsync()
             };
-            return View("~/Views/Admin/AdminDashboard.cshtml", stats);                    
+            return View("~/Views/Admin/AdminDashboard.cshtml", stats);
         }
 
+        private async Task<List<object>> GetMonthlyRevenue()
+        {
+            var monthlyRevenue = await _context.Orders
+                .Where(o => o.Status == "Completed" && o.OrderDate.Year == 2025)
+                .GroupBy(o => o.OrderDate.Month)
+                .Select(g => new { Month = g.Key, Revenue = g.Sum(o => o.TotalPrice) })
+                .OrderBy(g => g.Month)
+                .Take(5)
+                .ToListAsync();
+
+            var data = new List<object>();
+            for (int i = 0; i < 5; i++)
+            {
+                var revenue = monthlyRevenue.FirstOrDefault(m => m.Month == i + 1)?.Revenue ?? 0;
+                data.Add(revenue);
+            }
+            return data;
+        }
+
+        private async Task<(List<string> CategoryNames, List<object> Revenues)> GetCategoryRevenue()
+        {
+            var categories = await _context.Categories
+                .Select(c => c.CategoryName)
+                .ToListAsync();
+
+            var categoryRevenue = await _context.Orders
+                .Where(o => o.Status == "Completed")
+                .Join(_context.OrderDetails,
+                    o => o.OrderID,
+                    od => od.OrderID,
+                    (o, od) => new { Order = o, OrderDetail = od })
+                .Join(_context.Products,
+                    ood => ood.OrderDetail.ProductID,
+                    p => p.ProductID,
+                    (ood, p) => new { ood.Order, ood.OrderDetail, Product = p })
+                .Join(_context.Categories,
+                    opod => opod.Product.CategoryID,
+                    c => c.CategoryID,
+                    (opod, c) => new { opod.Order, opod.OrderDetail, opod.Product, Category = c })
+                .GroupBy(x => x.Category.CategoryName)
+                .Select(g => new { CategoryName = g.Key, Revenue = g.Sum(x => x.OrderDetail.Price * x.OrderDetail.Quantity) })
+                .ToListAsync();
+
+            var revenues = new List<object>();
+            foreach (var cat in categories)
+            {
+                var revenue = categoryRevenue.FirstOrDefault(c => c.CategoryName == cat)?.Revenue ?? 0;
+                revenues.Add(revenue);
+            }
+
+            return (categories, revenues);
+        }
 
         [HttpGet]
         [Route("UserList")]

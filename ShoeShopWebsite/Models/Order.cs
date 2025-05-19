@@ -31,7 +31,9 @@ namespace ShoeShopWebsite.Models
 
         [Required]
         public string PaymentMethod { get; set; }
-
+        public int? DiscountCodeID { get; set; } // Thêm trường này (nullable)
+        public decimal? DiscountAmount { get; set; } // Thêm trường này (nullable)
+        public DiscountCode? DiscountCode { get; set; } // Navigation property
         public List<OrderDetail> OrderDetails { get; set; }
     }
 }

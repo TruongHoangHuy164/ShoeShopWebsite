@@ -16,30 +16,29 @@
     }
     else
     {
-        // Xác định bước hiện tại và màu sắc dựa trên trạng thái đơn hàng
         var currentStep = 0;
-        var statusColor = "#ddd"; // Mặc định
+        var statusColor = "#ddd";
         switch (Model.Status.ToLower())
         {
             case "pending":
                 currentStep = 1;
-                statusColor = "#FF9800"; // Cam
+                statusColor = "#FF9800";
                 break;
             case "confirmed":
                 currentStep = 2;
-                statusColor = "#2196F3"; // Xanh dương
+                statusColor = "#2196F3";
                 break;
             case "delivering":
                 currentStep = 3;
-                statusColor = "#9C27B0"; // Tím
+                statusColor = "#9C27B0";
                 break;
             case "completed":
                 currentStep = 4;
-                statusColor = "#4CAF50"; // Xanh lá
+                statusColor = "#4CAF50";
                 break;
             case "failed":
                 currentStep = 0;
-                statusColor = "#F44336"; // Đỏ
+                statusColor = "#F44336";
                 break;
         }
 
@@ -48,7 +47,6 @@
             Cảm ơn bạn đã mua sắm tại ShoeShopWebsite. Đơn hàng của bạn đang được xử lý.
         </div>
 
-        <!-- Hiển thị thông báo từ TempData -->
         @if (TempData["SuccessMessage"] != null)
         {
             <div class="alert alert-success">@TempData["SuccessMessage"]</div>
@@ -58,7 +56,6 @@
             <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
         }
 
-        <!-- Thanh tiến độ -->
         <div class="progress-tracker mb-4" style="--status-color: @statusColor;">
             <div class="step @(currentStep >= 1 ? "active" : "")">
                 <span class="step-circle"></span>
@@ -93,6 +90,10 @@
                 @if (!string.IsNullOrEmpty(Model.Note))
                 {
                     <li><strong>Ghi chú:</strong> @Model.Note</li>
+                }
+                @if (Model.DiscountCode != null)
+                {
+                    <li><strong>Mã giảm giá:</strong> @Model.DiscountCode.Code (Giảm @Model.DiscountAmount?.ToString("N0") đ)</li>
                 }
                 <li>
                     <strong>Trạng thái:</strong>
@@ -138,8 +139,19 @@
             <tfoot>
                 <tr>
                     <td colspan="5" class="text-end"><strong>Tổng cộng:</strong></td>
-                    <td><strong>@Model.TotalPrice.ToString("N0") đ</strong></td>
+                    <td><strong>@(Model?.OrderDetails != null ? Model.OrderDetails.Sum(d => d.Price * d.Quantity).ToString("N0") : "0") đ</strong></td>
                 </tr>
+                @if (Model != null && Model.DiscountAmount.HasValue && Model.DiscountAmount > 0)
+                {
+                    <tr>
+                        <td colspan="5" class="text-end"><strong>Giảm giá:</strong></td>
+                        <td><strong>-@Model.DiscountAmount.Value.ToString("N0") đ</strong></td>
+                    </tr>
+                    <tr>
+                        <td colspan="5" class="text-end"><strong>Thành tiền:</strong></td>
+                        <td><strong>@Model.TotalPrice.ToString("N0") đ</strong></td>
+                    </tr>
+                }
             </tfoot>
         </table>
 
@@ -227,7 +239,6 @@
             color: #F44336;
         }
 
-        /* CSS cho thanh tiến độ */
         .progress-tracker {
             display: flex;
             justify-content: space-between;
@@ -254,7 +265,7 @@
         }
 
         .step.active .step-circle {
-            background-color: var(--status-color); /* Sử dụng màu của trạng thái */
+            background-color: var(--status-color);
         }
 
         .step-label {
