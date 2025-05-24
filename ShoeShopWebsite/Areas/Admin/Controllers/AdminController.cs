@@ -44,8 +44,11 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
                 TotalOrders = await _context.Orders.CountAsync(),
                 TotalRevenue = await _context.Orders.Where(o => o.Status == "Completed").SumAsync(o => o.TotalPrice),
                 MonthlyRevenue = await GetMonthlyRevenue(),
+                QuarterlyRevenue = await GetQuarterlyRevenue(),
                 CategoryRevenueData = await GetCategoryRevenue(),
-                DiscountCodeCount = await _context.DiscountCodes.CountAsync()
+                BestSellingProducts = await GetBestSellingProducts(),
+                DiscountCodeCount = await _context.DiscountCodes.CountAsync(),
+                TotalReviews = await _context.ProductReviews.CountAsync() // Thêm mới
             };
             return View("~/Views/Admin/AdminDashboard.cshtml", stats);
         }
@@ -67,6 +70,47 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
                 data.Add(revenue);
             }
             return data;
+        }
+
+        private async Task<List<object>> GetQuarterlyRevenue()
+        {
+            var quarterlyRevenue = await _context.Orders
+                .Where(o => o.Status == "Completed" && o.OrderDate.Year == 2025)
+                .GroupBy(o => (o.OrderDate.Month - 1) / 3 + 1)
+                .Select(g => new { Quarter = g.Key, Revenue = g.Sum(o => o.TotalPrice) })
+                .OrderBy(g => g.Quarter)
+                .ToListAsync();
+
+            var data = new List<object>();
+            for (int i = 1; i <= 4; i++)
+            {
+                var revenue = quarterlyRevenue.FirstOrDefault(q => q.Quarter == i)?.Revenue ?? 0;
+                data.Add(revenue);
+            }
+            return data;
+        }
+
+        private async Task<List<BestSellingProduct>> GetBestSellingProducts()
+        {
+            var bestSelling = await _context.OrderDetails
+                .Join(_context.Orders,
+                    od => od.OrderID,
+                    o => o.OrderID,
+                    (od, o) => new { OrderDetail = od, Order = o })
+                .Where(o => o.Order.Status == "Completed")
+                .GroupBy(od => od.OrderDetail.ProductID)
+                .Select(g => new BestSellingProduct
+                {
+                    ProductID = g.Key,
+                    ProductName = _context.Products.FirstOrDefault(p => p.ProductID == g.Key).ProductName,
+                    TotalQuantitySold = g.Sum(od => od.OrderDetail.Quantity),
+                    TotalRevenue = g.Sum(od => od.OrderDetail.Price * od.OrderDetail.Quantity)
+                })
+                .OrderByDescending(p => p.TotalQuantitySold)
+                .Take(5)
+                .ToListAsync();
+
+            return bestSelling;
         }
 
         private async Task<(List<string> CategoryNames, List<object> Revenues)> GetCategoryRevenue()
@@ -103,6 +147,55 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
             return (categories, revenues);
         }
 
+        [HttpGet]
+        [Route("ReviewList")]
+        public async Task<IActionResult> ReviewList()
+        {
+            var reviews = await _context.ProductReviews
+                .Include(r => r.Product)
+                .Include(r => r.User)
+                .Select(r => new
+                {
+                    r.ReviewID,
+                    r.Product.ProductName,
+                    UserName = r.User.FullName ?? r.User.UserName,
+                    r.Rating,
+                    r.Comment,
+                    r.ReviewDate
+                })
+                .ToListAsync();
+
+            return View("~/Views/Admin/ReviewList.cshtml", reviews);
+        }
+
+        [HttpPost]
+        [Route("DeleteReview/{id}")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteReview(int id)
+        {
+            try
+            {
+                var review = await _context.ProductReviews.FirstOrDefaultAsync(r => r.ReviewID == id);
+                if (review == null)
+                {
+                    TempData["ErrorMessage"] = "Không tìm thấy đánh giá để xóa.";
+                    return RedirectToAction(nameof(ReviewList));
+                }
+
+                _context.ProductReviews.Remove(review);
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "Xóa đánh giá thành công!";
+                return RedirectToAction(nameof(ReviewList));
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Lỗi khi xóa đánh giá: {ex.Message}";
+                return RedirectToAction(nameof(ReviewList));
+            }
+        }
+
+        // Các phương thức khác giữ nguyên
         [HttpGet]
         [Route("UserList")]
         public async Task<IActionResult> UserList()
@@ -274,12 +367,6 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
                     return View("~/Views/Admin/EditUser.cshtml", user);
                 }
 
-                //if (!string.IsNullOrEmpty(password))
-                //{
-                //    var token = await _userManager.GeneratePasswordResetTokenAsync(existingUser);
-                //    await _userManager.ResetPasswordAsync(existingUser, token, password);
-                //}
-
                 var currentRoles = await _userManager.GetRolesAsync(existingUser);
                 await _userManager.RemoveFromRolesAsync(existingUser, currentRoles);
                 await _userManager.AddToRoleAsync(existingUser, selectedRole);
@@ -294,10 +381,6 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
                 return View("~/Views/Admin/EditUser.cshtml", user);
             }
         }
-
-        // --- Quản lý sản phẩm ---
-
-        // ... (Các phần khác giữ nguyên)
 
         [HttpGet]
         [Route("ProductList")]
@@ -445,7 +528,6 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
             return View("~/Views/Admin/DeleteProduct.cshtml", product);
         }
 
-        // POST: /Admin/DeleteProduct/{id} - Thực hiện xóa
         [HttpPost]
         [Route("DeleteProduct/{id}")]
         [ValidateAntiForgeryToken]
@@ -487,10 +569,6 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
                 return RedirectToAction(nameof(ProductList));
             }
         }
-
-
-
-        // --- Quản lý danh mục ---
 
         [HttpGet]
         [Route("CategoryList")]
@@ -551,7 +629,6 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
         {
             if (id != category.CategoryID) return NotFound();
 
-            // Kiểm tra dữ liệu đầu vào
             if (string.IsNullOrEmpty(category.CategoryName))
             {
                 ModelState.AddModelError("CategoryName", "Tên danh mục là bắt buộc.");
@@ -560,7 +637,6 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
 
             try
             {
-                // Tải danh mục hiện tại từ DB
                 var existingCategory = await _context.Categories.FirstOrDefaultAsync(c => c.CategoryID == id);
                 if (existingCategory == null)
                 {
@@ -568,11 +644,9 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
                     return RedirectToAction(nameof(CategoryList));
                 }
 
-                // Cập nhật các trường từ dữ liệu form
                 existingCategory.CategoryName = category.CategoryName;
                 existingCategory.Description = category.Description;
 
-                // Lưu thay đổi
                 await _context.SaveChangesAsync();
 
                 TempData["SuccessMessage"] = "Cập nhật danh mục thành công!";
@@ -618,7 +692,6 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
             }
         }
 
-        // Helper Methods
         private void LoadProductViewData(Product product)
         {
             ViewData["CategoryID"] = new SelectList(_context.Categories, "CategoryID", "CategoryName", product?.CategoryID);

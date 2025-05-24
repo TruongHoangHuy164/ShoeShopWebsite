@@ -20,8 +20,8 @@ namespace ShoeShopWebsite.Models
         public DbSet<OrderDetail> OrderDetails { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Wishlist> Wishlist { get; set; }
-        
 
+        public DbSet<ProductReview> ProductReviews { get; set; }
         public DbSet<Province> Provinces { get; set; }
         public DbSet<District> Districts { get; set; }
         public DbSet<Ward> Wards { get; set; }

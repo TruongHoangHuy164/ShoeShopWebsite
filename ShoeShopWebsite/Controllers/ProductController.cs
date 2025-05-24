@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ShoeShopWebsite.Models;
@@ -94,6 +95,13 @@ namespace ShoeShopWebsite.Controllers
 
             if (product == null) return NotFound();
 
+            var reviews = await _context.ProductReviews
+                .Where(r => r.ProductID == id)
+                .Include(r => r.User)
+                .OrderByDescending(r => r.ReviewDate)
+                .ToListAsync();
+
+            ViewData["Reviews"] = reviews;
             ViewData["Sizes"] = product.ProductSizes.Select(ps => ps.Size).ToList();
             ViewData["Colors"] = product.ProductColors.Select(pc => pc.Color).ToList();
 
@@ -486,6 +494,74 @@ namespace ShoeShopWebsite.Controllers
                     image.IsPrimary = (image.ImageID == primaryImageId);
                 }
                 await _context.SaveChangesAsync();
+            }
+        }
+        // GET: Product/AddReview/5?orderId=1
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> AddReview(int productId)
+        {
+            var userId = User.Identity.Name;
+            var hasPurchased = await _context.OrderDetails
+                .Join(_context.Orders,
+                    od => od.OrderID,
+                    o => o.OrderID,
+                    (od, o) => new { od.ProductID, o.SessionId, o.Status })
+                .AnyAsync(x => x.ProductID == productId && x.SessionId == userId && x.Status == "Completed");
+
+            if (!hasPurchased)
+            {
+                TempData["ErrorMessage"] = "Bạn chỉ có thể đánh giá sản phẩm đã mua và hoàn tất đơn hàng.";
+                return RedirectToAction("Index");
+            }
+
+            var hasReviewed = await _context.ProductReviews
+                .AnyAsync(r => r.ProductID == productId && r.UserID == userId);
+
+            if (hasReviewed)
+            {
+                TempData["ErrorMessage"] = "Bạn đã đánh giá sản phẩm này.";
+                return RedirectToAction("Index");
+            }
+
+            var model = new ProductReview
+            {
+                ProductID = productId,
+                UserID = userId,
+                ReviewDate = DateTime.Now
+            };
+
+            ViewData["ProductName"] = (await _context.Products.FindAsync(productId))?.ProductName;
+            return View("~/Views/Product/AddReview.cshtml", model);
+        }
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddReview(ProductReview review)
+        {
+            if (!ModelState.IsValid || review.Rating < 1 || review.Rating > 5)
+            {
+                ModelState.AddModelError("Rating", "Điểm đánh giá phải từ 1 đến 5.");
+                ViewData["ProductName"] = (await _context.Products.FindAsync(review.ProductID))?.ProductName;
+                return View("~/Views/Product/AddReview.cshtml", review);
+            }
+
+            try
+            {
+                review.UserID = User.Identity.Name;
+                review.ReviewDate = DateTime.Now;
+                _context.ProductReviews.Add(review);
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "Thêm đánh giá thành công!";
+                return RedirectToAction("Details", new { id = review.ProductID });
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Lỗi khi thêm đánh giá: {ex.Message}";
+                ViewData["ProductName"] = (await _context.Products.FindAsync(review.ProductID))?.ProductName;
+                return View("~/Views/Product/AddReview.cshtml", review);
             }
         }
     }

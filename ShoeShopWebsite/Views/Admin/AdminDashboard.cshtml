@@ -34,6 +34,7 @@
                 <li><a href="/Admin/ProductList" class="btn btn-sidebar"><i class="fas fa-box"></i> Quản lý sản phẩm</a></li>
                 <li><a href="/Admin/CategoryList" class="btn btn-sidebar"><i class="fas fa-folder-open"></i> Quản lý danh mục</a></li>
                 <li><a href="/Admin/ListDiscountCodes" class="btn btn-sidebar"><i class="fas fa-ticket-alt"></i> Quản lý mã giảm giá</a></li>
+                <li><a href="/Admin/ReviewList" class="btn btn-sidebar"><i class="fas fa-star"></i> Quản lý đánh giá</a></li>
             </ul>
         </div>
 
@@ -67,8 +68,36 @@
             </div>
 
             <div class="section">
+                <h2>Thống kê doanh thu theo quý</h2>
+                <canvas id="quarterlyRevenueChart"></canvas>
+            </div>
+
+            <div class="section">
                 <h2>Doanh thu theo danh mục</h2>
                 <canvas id="categoryRevenueChart"></canvas>
+            </div>
+
+            <div class="section">
+                <h2>Sản phẩm bán chạy nhất</h2>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Tên sản phẩm</th>
+                            <th>Số lượng bán</th>
+                            <th>Doanh thu (VNĐ)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var product in Model.BestSellingProducts)
+                        {
+                            <tr>
+                                <td>@product.ProductName</td>
+                                <td>@product.TotalQuantitySold</td>
+                                <td>@product.TotalRevenue.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -144,11 +173,11 @@
         .btn-sidebar {
             display: flex;
             align-items: center;
-            gap: 10px; /* Khoảng cách giữa biểu tượng và văn bản */
+            gap: 10px;
             background-color: #6c757d;
             color: #FFFFFF;
             padding: 10px;
-            text-align: left; /* Căn trái để biểu tượng và văn bản thẳng hàng */
+            text-align: left;
             border-radius: 4px;
             text-decoration: none;
             font-size: 14px;
@@ -160,7 +189,7 @@
             }
 
             .btn-sidebar i {
-                font-size: 16px; /* Kích thước biểu tượng */
+                font-size: 16px;
             }
 
         .main-content {
@@ -239,9 +268,29 @@
                 border-bottom: 2px solid #E0E0E0;
             }
 
-        canvas#monthlyRevenueChart, canvas#categoryRevenueChart {
+        canvas#monthlyRevenueChart, canvas#categoryRevenueChart, canvas#quarterlyRevenueChart {
             max-height: 400px;
         }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .table th, .table td {
+                padding: 10px;
+                text-align: left;
+                border: 1px solid #E0E0E0;
+            }
+
+            .table th {
+                background-color: #F5F5F5;
+                font-weight: bold;
+            }
+
+            .table tbody tr:hover {
+                background-color: #F9F9F9;
+            }
     </style>
 }
 
@@ -290,7 +339,47 @@
             }
         });
 
-        // Biểu đồ doanh thu theo danh mục (biểu đồ tròn)
+        // Biểu đồ doanh thu theo quý
+        const ctxQuarterly = document.getElementById('quarterlyRevenueChart').getContext('2d');
+        const quarterlyRevenueChart = new Chart(ctxQuarterly, {
+            type: 'bar',
+            data: {
+                labels: ['Quý 1', 'Quý 2', 'Quý 3', 'Quý 4'],
+                datasets: [{
+                    label: 'Doanh thu (VNĐ)',
+                    data: [@Html.Raw(string.Join(",", Model.QuarterlyRevenue))],
+                    backgroundColor: ['#42A5F5', '#66BB6A', '#FFA726', '#EF5350'],
+                    borderColor: ['#1E88E5', '#43A047', '#F57C00', '#D32F2F'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Doanh thu (VNĐ)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Quý'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                }
+            }
+        });
+
+        // Biểu đồ doanh thu theo danh mục
         const ctxCategory = document.getElementById('categoryRevenueChart').getContext('2d');
         const categoryRevenueChart = new Chart(ctxCategory, {
             type: 'pie',

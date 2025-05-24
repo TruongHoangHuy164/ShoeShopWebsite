@@ -1,5 +1,5 @@
-﻿@model ShoeShopWebsite.Models.Product
-
+﻿@model ShoeShopWebsite.Models.Product;
+@using ShoeShopWebsite.Models;
 @{
     ViewData["Title"] = "Chi tiết sản phẩm - " + Model.ProductName;
 }
@@ -106,10 +106,72 @@
             <!-- Nút quay lại -->
             <a asp-action="Index" class="btn btn-link mt-3 text-muted">Quay lại danh sách sản phẩm</a>
         </div>
-    </div>
-</div>
 
+    </div>
+
+</div>
+<div class="reviews-section mt-5">
+    <h3>Đánh giá sản phẩm</h3>
+    <div class="mb-3">
+        <label for="filterRating" class="form-label">Lọc theo số sao:</label>
+        <select id="filterRating" class="form-select w-auto d-inline-block">
+            <option value="0">Tất cả</option>
+            @for (int i = 1; i <= 5; i++)
+            {
+                <option value="@i">@i sao</option>
+            }
+        </select>
+    </div>
+    @{
+        var reviews = ViewData["Reviews"] as List<ProductReview> ?? new List<ProductReview>();
+        var averageRating = reviews.Any() ? Math.Round(reviews.Average(r => r.Rating), 1) : 0;
+    }
+
+    @if (reviews.Any())
+    {
+        <div id="reviewsContainer">
+            @foreach (var review in reviews)
+            {
+                <div class="review-item mb-3 p-3 border rounded" data-rating="@review.Rating">
+                    <div class="d-flex justify-content-between">
+                        <strong>@(review.User?.FullName ?? review.User?.UserName)</strong>
+                        <span>@review.ReviewDate.ToString("dd/MM/yyyy HH:mm")</span>
+                    </div>
+                    <div class="rating">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <i class="fas fa-star @(i <= review.Rating ? "text-warning" : "text-muted")"></i>
+                        }
+                    </div>
+                    <p class="mt-2">@(string.IsNullOrEmpty(review.Comment) ? "Không có bình luận" : review.Comment)</p>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p>Chưa có đánh giá nào cho sản phẩm này.</p>
+    }
+</div>
 <style>
+    .reviews-section {
+        border-top: 1px solid #E0E0E0;
+        padding-top: 20px;
+    }
+
+    .review-item {
+        background-color: #F9F9F9;
+        transition: all 0.3s ease;
+    }
+
+        .review-item:hover {
+            background-color: #F5F5F5;
+        }
+
+    .rating .fa-star {
+        font-size: 1.2rem;
+        margin-right: 2px;
+    }
     .nike-style {
         font-family: 'Helvetica Neue', Arial, sans-serif;
         max-width: 1200px;
