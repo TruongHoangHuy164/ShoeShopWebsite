@@ -64,7 +64,10 @@
                                     }
                                     <div class="card-body flex-grow-1 d-flex flex-column">
                                         <h5 class="card-title">@product.ProductName</h5>
-                                        <p class="card-text">
+                                        <p class="card-text product-description">
+                                            @(string.IsNullOrEmpty(product.Description) ? "Không có mô tả." : product.Description)
+                                        </p>
+                                        <p class="card-text mt-2">
                                             <strong>@product.Price.ToString("N0") đ</strong>
                                         </p>
                                         @if (product.ProductColors != null && product.ProductColors.Any())
@@ -79,29 +82,9 @@
                                                 }
                                             </div>
                                         }
-                                        <div class="mb-2">
-                                            <label for="size-@product.ProductID" class="form-label">Kích thước:</label>
-                                            <select id="size-@product.ProductID" class="form-select form-select-sm size-select" data-product-id="@product.ProductID">
-                                                <option value="">Chọn kích thước</option>
-                                                @if (ViewBag.Sizes != null)
-                                                {
-                                                    foreach (var size in ViewBag.Sizes as List<ShoeShopWebsite.Models.Size>)
-                                                    {
-                                                        <option value="@size.SizeID">@size.SizeName</option>
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    <option value="">Không có kích thước nào</option>
-                                                }
-                                            </select>
-                                        </div>
                                     </div>
                                     <div class="card-footer text-center border-0 bg-transparent mt-auto d-flex justify-content-center gap-2">
                                         <a href="@Url.Action("Details", "Product", new { id = product.ProductID })" class="btn btn-light btn-sm">Xem chi tiết</a>
-                                        <button class="btn btn-light btn-sm add-to-cart" data-product-id="@product.ProductID">
-                                            <i class="bi bi-cart-plus me-1"></i> Thêm vào giỏ
-                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -269,7 +252,7 @@
     }
 
     .card {
-        min-height: 500px;
+        min-height: 550px; /* Tăng chiều cao tối thiểu để chứa mô tả */
     }
 
     .card-body {
@@ -285,6 +268,18 @@
 
     .card-img-top {
         border-bottom: 1px solid #ddd;
+    }
+
+    .product-description {
+        font-size: 0.9rem;
+        color: #666;
+        margin-bottom: 10px;
+        display: -webkit-box;
+        -webkit-line-clamp: 3; /* Giới hạn 3 dòng */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.4;
     }
 
     .custom-arrow {

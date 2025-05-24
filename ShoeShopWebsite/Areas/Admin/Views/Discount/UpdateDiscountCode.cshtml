@@ -1,0 +1,382 @@
+﻿@using ShoeShopWebsite.Models
+@model ShoeShopWebsite.Models.DiscountCode
+@{
+    ViewData["Title"] = "Sửa mã giảm giá - ShoeShopWebsite";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container my-5">
+    <h1 class="mb-4">Sửa mã giảm giá</h1>
+
+    <!-- Alerts -->
+    <div class="alert-container mb-4">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        @if (ViewData.ModelState.Any(x => x.Value.Errors.Any()))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong>Lỗi nhập liệu từ server:</strong>
+                <ul class="mb-0">
+                    @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                    {
+                        <li>@error.ErrorMessage</li>
+                    }
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        <div id="clientErrors" class="alert alert-danger alert-dismissible fade show d-none" role="alert">
+            <strong>Lỗi nhập liệu từ client hoặc server:</strong>
+            <ul id="clientErrorList" class="mb-0"></ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form id="discountForm" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="DiscountCodeID" value="@Model.DiscountCodeID" />
+
+                <!-- Các trường input giữ nguyên như cũ -->
+                <div class="mb-3">
+                    <label asp-for="Code" class="form-label fw-medium">Mã giảm giá</label>
+                    <input asp-for="Code" name="Code" class="form-control" maxlength="50" placeholder="Nhập mã (ví dụ: SALE2025)" value="@Model.Code" readonly />
+                    <span asp-validation-for="Code" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="DiscountType" class="form-label fw-medium">Loại giảm giá</label>
+                    <select asp-for="DiscountType" name="DiscountType" class="form-select" id="DiscountType">
+                        <option value="" disabled>Chọn loại giảm giá</option>
+                        <option value="0" @(Model.DiscountType == DiscountTypeEnum.Percentage ? "selected" : "")>Phần trăm</option>
+                        <option value="1" @(Model.DiscountType == DiscountTypeEnum.Fixed ? "selected" : "")>Số tiền cố định</option>
+                    </select>
+                    <span asp-validation-for="DiscountType" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="DiscountValue" class="form-label fw-medium">Giá trị giảm giá</label>
+                    <input asp-for="DiscountValue" name="DiscountValue" class="form-control" type="number" step="0.01" min="0" id="DiscountValue" placeholder="Nhập giá trị" value="@Model.DiscountValue" />
+                    <span asp-validation-for="DiscountValue" class="text-danger" id="discountValueFeedback"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="StartDate" class="form-label fw-medium">Ngày bắt đầu</label>
+                        <input asp-for="StartDate" name="StartDate" class="form-control" type="date" id="StartDate" value="@Model.StartDate.ToString("yyyy-MM-dd")" />
+                        <span asp-validation-for="StartDate" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="ExpiryDate" class="form-label fw-medium">Ngày hết hạn</label>
+                        <input asp-for="ExpiryDate" name="ExpiryDate" class="form-control" type="date" id="ExpiryDate" value="@Model.ExpiryDate.ToString("yyyy-MM-dd")" />
+                        <span asp-validation-for="ExpiryDate" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="MaxUsage" class="form-label fw-medium">Số lần sử dụng tối đa</label>
+                    <input asp-for="MaxUsage" name="MaxUsage" class="form-control" type="number" min="0" step="1" id="MaxUsage" placeholder="Nhập số lần (0 = không giới hạn)" value="@Model.MaxUsage" />
+                    <span asp-validation-for="MaxUsage" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="MinOrderValue" class="form-label fw-medium">Giá trị đơn hàng tối thiểu</label>
+                    <input asp-for="MinOrderValue" name="MinOrderValue" class="form-control" type="number" step="0.01" min="0" id="MinOrderValue" placeholder="Nhập giá trị (VND)" value="@Model.MinOrderValue" />
+                    <span asp-validation-for="MinOrderValue" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="IsActive" name="IsActive" value="true" @(Model.IsActive ? "checked" : "") />
+                    <input type="hidden" name="IsActive" value="false" />
+                    <label for="IsActive" class="form-check-label">Kích hoạt</label>
+                    <span asp-validation-for="IsActive" class="text-danger"></span>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="@Url.Action("ListDiscountCodes", "Discount")" class="btn btn-secondary">Quay lại danh sách</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <style>
+        .container {
+            max-width: 800px;
+        }
+
+        .card {
+            border-radius: 10px;
+            border: none;
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-control, .form-select {
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+            .form-control:focus, .form-select:focus {
+                border-color: #007bff;
+                box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+            }
+
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+            padding: 10px 20px;
+        }
+
+            .btn-primary:hover {
+                background-color: #0056b3;
+                border-color: #0056b3;
+            }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+            padding: 10px 20px;
+        }
+
+            .btn-secondary:hover {
+                background-color: #5a6268;
+                border-color: #5a6268;
+            }
+
+        .alert {
+            border-radius: 6px;
+        }
+
+        .invalid-feedback {
+            font-size: 0.875rem;
+        }
+
+        #clientErrors {
+            display: none;
+        }
+
+            #clientErrors.show {
+                display: block;
+            }
+
+        .form-control[readonly] {
+            background-color: #e9ecef;
+            opacity: 1;
+        }
+
+        .text-danger {
+            display: block;
+            font-size: 0.875rem;
+            color: #dc3545;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function () {
+            const form = $('#discountForm');
+            const discountType = $('#DiscountType');
+            const discountValue = $('#DiscountValue');
+            const startDate = $('#StartDate');
+            const expiryDate = $('#ExpiryDate');
+            const maxUsage = $('#MaxUsage');
+            const minOrderValue = $('#MinOrderValue');
+            const clientErrors = $('#clientErrors');
+            const clientErrorList = $('#clientErrorList');
+
+            // Kiểm tra ID mã giảm giá
+            if (!@Model.DiscountCodeID) {
+                clientErrorList.append('<li>ID mã giảm giá không hợp lệ.</li>');
+                clientErrors.removeClass('d-none').addClass('show');
+                form.find('button[type="submit"]').prop('disabled', true);
+                return;
+            }
+
+            // Submit form
+            form.on('submit', function (e) {
+                e.preventDefault();
+                clientErrors.addClass('d-none').removeClass('show');
+                clientErrorList.empty();
+
+                const errors = [];
+
+                // Client-side validation
+                const discountTypeVal = discountType.val();
+                if (!discountTypeVal || discountTypeVal === '') {
+                    errors.push('Vui lòng chọn loại giảm giá.');
+                }
+
+                const maxUsageVal = maxUsage.val();
+                if (!maxUsageVal || parseInt(maxUsageVal) < 0 || isNaN(parseInt(maxUsageVal))) {
+                    errors.push('Vui lòng nhập số lần sử dụng tối đa hợp lệ.');
+                }
+
+                const minOrderVal = minOrderValue.val();
+                if (!minOrderVal || parseFloat(minOrderVal) < 0 || isNaN(parseFloat(minOrderVal))) {
+                    errors.push('Vui lòng nhập giá trị đơn hàng tối thiểu hợp lệ.');
+                }
+
+                const value = parseFloat(discountValue.val());
+                if (isNaN(value)) {
+                    errors.push('Giá trị giảm giá phải là một số hợp lệ.');
+                } else if (discountTypeVal === '0' && (value <= 0 || value > 100)) {
+                    errors.push('Giá trị giảm giá phải từ 0 đến 100% khi chọn loại Phần trăm.');
+                } else if (discountTypeVal === '1' && value <= 0) {
+                    errors.push('Giá trị giảm giá phải lớn hơn 0 khi chọn loại Số tiền cố định.');
+                }
+
+                const start = new Date(startDate.val());
+                const expiry = new Date(expiryDate.val());
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                if (start < today) {
+                    errors.push('Ngày bắt đầu không được nhỏ hơn ngày hiện tại.');
+                }
+
+                if (start && expiry && expiry < start) {
+                    errors.push('Ngày hết hạn phải lớn hơn hoặc bằng ngày bắt đầu.');
+                }
+
+                if (errors.length > 0) {
+                    errors.forEach(error => clientErrorList.append(`<li>${error}</li>`));
+                    clientErrors.removeClass('d-none').addClass('show');
+                    return;
+                }
+
+                // Submit form via AJAX
+                const url = '@Url.Action("UpdateDiscountCode", "Discount", new { id = Model.DiscountCodeID })';
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: form.serialize(),
+                    success: function (response) {
+                        if (response.success) {
+                            // Chuyển hướng về danh sách với thông báo thành công
+                            window.location.href = '@Url.Action("ListDiscountCodes", "Discount")';
+                        } else {
+                            clientErrorList.empty();
+                            if (response.errors && Array.isArray(response.errors)) {
+                                response.errors.forEach(error => clientErrorList.append(`<li>${error}</li>`));
+                            } else {
+                                clientErrorList.append(`<li>${response.error || 'Lỗi không xác định khi cập nhật.'}</li>`);
+                            }
+                            clientErrors.removeClass('d-none').addClass('show');
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('AJAX Error:', xhr.responseText);
+                        let errorMessage = 'Lỗi server: ' + xhr.status + ' - ' + error;
+                        if (xhr.status === 404) {
+                            errorMessage = xhr.responseJSON?.error || 'Không tìm thấy mã giảm giá.';
+                        }
+                        clientErrorList.append(`<li>${errorMessage}</li>`);
+                        clientErrors.removeClass('d-none').addClass('show');
+                    }
+                });
+            });
+
+            // Dynamic updates based on discount type
+            discountType.on('change', function () {
+                const type = $(this).val();
+                const feedback = $('#discountValueFeedback');
+                feedback.text('');
+                if (type === '0') {
+                    discountValue.attr('max', 100).attr('min', 0).attr('placeholder', 'Nhập phần trăm (0-100)');
+                    if (parseFloat(discountValue.val()) > 100) {
+                        discountValue.val('');
+                    }
+                } else if (type === '1') {
+                    discountValue.removeAttr('max').attr('min', 0).attr('placeholder', 'Nhập số tiền (VND)');
+                } else {
+                    discountValue.removeAttr('max').removeAttr('min').attr('placeholder', 'Nhập giá trị');
+                }
+                discountValue.trigger('input');
+            });
+
+            discountValue.on('input', function () {
+                const value = parseFloat($(this).val());
+                const type = discountType.val();
+                const feedback = $('#discountValueFeedback');
+                feedback.text('');
+                if (isNaN(value)) {
+                    feedback.text('Vui lòng nhập một số hợp lệ.');
+                } else if (!type) {
+                    feedback.text('Vui lòng chọn loại giảm giá trước.');
+                } else if (type === '0' && (value <= 0 || value > 100)) {
+                    feedback.text('Giá trị giảm giá phải từ 0 đến 100% khi chọn loại Phần trăm.');
+                } else if (type === '1' && value <= 0) {
+                    feedback.text('Giá trị giảm giá phải lớn hơn 0 khi chọn loại Số tiền cố định.');
+                }
+            });
+
+            startDate.on('change', function () {
+                const today = new Date().toISOString().split('T')[0];
+                $(this).attr('min', today);
+                const start = new Date($(this).val());
+                const expiry = new Date(expiryDate.val());
+                if (start < new Date(today)) {
+                    $(this).next('.text-danger').text('Ngày bắt đầu không được nhỏ hơn ngày hiện tại.');
+                } else if (start && expiry && expiry < start) {
+                    expiryDate.next('.text-danger').text('Ngày hết hạn phải lớn hơn hoặc bằng ngày bắt đầu.');
+                    $(this).next('.text-danger').text('');
+                } else {
+                    $(this).next('.text-danger').text('');
+                    expiryDate.next('.text-danger').text('');
+                }
+            });
+
+            expiryDate.on('change', function () {
+                const start = new Date(startDate.val());
+                const expiry = new Date($(this).val());
+                if (start && expiry && expiry < start) {
+                    $(this).next('.text-danger').text('Ngày hết hạn phải lớn hơn hoặc bằng ngày bắt đầu.');
+                } else {
+                    $(this).next('.text-danger').text('');
+                }
+            });
+
+            maxUsage.add(minOrderValue).on('input', function () {
+                const value = parseFloat($(this).val());
+                const feedback = $(this).next('.text-danger');
+                if (value < 0 || isNaN(value)) {
+                    feedback.text($(this).attr('id') === 'MaxUsage' ? 'Số lần sử dụng tối đa không được nhỏ hơn 0.' : 'Giá trị đơn hàng tối thiểu không được nhỏ hơn 0.');
+                } else {
+                    feedback.text('');
+                }
+            });
+
+            form.find('input, select').on('input change', function () {
+                $(this).next('.text-danger').text('');
+                clientErrors.addClass('d-none').removeClass('show');
+                clientErrorList.empty();
+            });
+        });
+    </script>
+}

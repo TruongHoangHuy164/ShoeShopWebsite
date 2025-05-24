@@ -64,15 +64,24 @@
                 </div>
 
                 <div class="mb-3">
+                    <label for="DiscountCode" class="form-label">Mã giảm giá</label>
+                    <div class="input-group">
+                        <input type="text" id="DiscountCode" name="DiscountCode" class="form-control" value="@Model.DiscountCode" placeholder="Nhập mã giảm giá" />
+                        <button type="button" id="applyDiscount" class="btn btn-outline-primary">Áp dụng</button>
+                    </div>
+                    <span id="discountFeedback" class="text-danger"></span>
+                    @if (Model.DiscountAmount.HasValue && Model.DiscountAmount > 0)
+                    {
+                        <div class="alert alert-success mt-2">Đã áp dụng mã giảm giá: Giảm @Model.DiscountAmount.Value.ToString("N0") đ</div>
+                    }
+                </div>
+
+                <div class="mb-3">
                     <label class="form-label">Phương thức thanh toán</label>
                     <div>
                         <input type="radio" id="cash" name="PaymentMethod" value="Cash" required />
                         <label for="cash">Thanh toán khi nhận hàng (COD)</label>
                     </div>
-                    @* <div> *@
-                    @*     <input type="radio" id="momo" name="PaymentMethod" value="MoMo" /> *@
-                    @*     <label for="momo">Thanh toán qua MoMo</label> *@
-                    @* </div> *@
                     <div>
                         <input type="radio" id="vnpay" name="PaymentMethod" value="VNPay" />
                         <label for="vnpay">Thanh toán qua VNPay</label>
@@ -120,11 +129,15 @@
                 <tfoot>
                     <tr>
                         <td colspan="3" class="text-end"><strong>Tổng cộng:</strong></td>
-                        <td>
-                            <strong>
-                                @(Model?.CartItems != null ? Model.CartItems.Sum(c => c.Product.Price * c.Quantity).ToString("N0") : "0") đ
-                            </strong>
-                        </td>
+                        <td id="totalPrice"><strong>@(Model?.CartItems != null ? Model.CartItems.Sum(c => c.Product.Price * c.Quantity).ToString("N0") : "0") đ</strong></td>
+                    </tr>
+                    <tr id="discountRow" style="@(Model != null && Model.DiscountAmount.HasValue && Model.DiscountAmount > 0 ? "" : "display:none;")">
+                        <td colspan="3" class="text-end"><strong>Giảm giá:</strong></td>
+                        <td id="discountAmount"><strong>@(Model != null && Model.DiscountAmount.HasValue && Model.DiscountAmount > 0 ? "-" + Model.DiscountAmount.Value.ToString("N0") + " đ" : "")</strong></td>
+                    </tr>
+                    <tr id="finalPriceRow" style="@(Model != null && Model.DiscountAmount.HasValue && Model.DiscountAmount > 0 ? "" : "display:none;")">
+                        <td colspan="3" class="text-end"><strong>Thành tiền:</strong></td>
+                        <td id="finalPrice"><strong>@(Model != null && Model.DiscountAmount.HasValue && Model.DiscountAmount > 0 ? (Model.CartItems.Sum(c => c.Product.Price * c.Quantity) - Model.DiscountAmount.Value).ToString("N0") + " đ" : "")</strong></td>
                     </tr>
                 </tfoot>
             </table>
@@ -134,4 +147,60 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function () {
+            $('#applyDiscount').click(function () {
+                var discountCode = $('#DiscountCode').val().trim();
+                if (!discountCode) {
+                    $('#discountFeedback').text('Vui lòng nhập mã giảm giá.');
+                    return;
+                }
+
+                $.ajax({
+                    url: '@Url.Action("ApplyDiscountCode", "Checkout")',
+                    type: 'POST',
+                    data: { discountCode: discountCode, '__RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                    success: function (response) {
+                        $('#discountFeedback').empty();
+                        if (response.success) {
+                            // Hiển thị thông báo thành công
+                            $('#discountFeedback').html('<span class="text-success">' + response.message + '</span>');
+
+                            // Cập nhật bảng chi tiết đơn hàng
+                            var totalPrice = parseFloat('@(Model?.CartItems != null ? Model.CartItems.Sum(c => c.Product.Price * c.Quantity) : 0)');
+                            var discountAmount = parseFloat(response.discountAmount);
+                            var finalPrice = totalPrice - discountAmount;
+
+                            // Định dạng số tiền với dấu phân cách hàng nghìn
+                            var formatNumber = function(num) {
+                                return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                            };
+
+                            // Cập nhật hàng giảm giá
+                            $('#discountRow').show();
+                            $('#discountAmount').html('<strong>-' + formatNumber(discountAmount.toFixed(0)) + ' đ</strong>');
+
+                            // Cập nhật hàng thành tiền
+                            $('#finalPriceRow').show();
+                            $('#finalPrice').html('<strong>' + formatNumber(finalPrice.toFixed(0)) + ' đ</strong>');
+
+                            // Lưu mã giảm giá vào input ẩn (nếu cần gửi lại server)
+                            $('#DiscountCode').val(discountCode);
+                        } else {
+                            // Hiển thị thông báo lỗi
+                            $('#discountFeedback').text(response.message);
+                            // Ẩn hàng giảm giá và thành tiền nếu mã không hợp lệ
+                            $('#discountRow').hide();
+                            $('#finalPriceRow').hide();
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        $('#discountFeedback').text('Lỗi khi áp dụng mã giảm giá: ' + error);
+                        $('#discountRow').hide();
+                        $('#finalPriceRow').hide();
+                    }
+                });
+            });
+        });
+    </script>
 }

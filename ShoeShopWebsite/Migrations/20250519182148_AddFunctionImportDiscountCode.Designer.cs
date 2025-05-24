@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ShoeShopWebsite.Models;
 
@@ -11,9 +12,11 @@ using ShoeShopWebsite.Models;
 namespace ShoeShopWebsite.Migrations
 {
     [DbContext(typeof(NikeShopDbContext))]
-    partial class NikeShopDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250519182148_AddFunctionImportDiscountCode")]
+    partial class AddFunctionImportDiscountCode
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -601,40 +604,6 @@ namespace ShoeShopWebsite.Migrations
                     b.ToTable("ProductImages");
                 });
 
-            modelBuilder.Entity("ShoeShopWebsite.Models.ProductReview", b =>
-                {
-                    b.Property<int>("ReviewID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReviewID"));
-
-                    b.Property<string>("Comment")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("ProductID")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Rating")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("ReviewDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UserID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("ReviewID");
-
-                    b.HasIndex("ProductID");
-
-                    b.HasIndex("UserID");
-
-                    b.ToTable("ProductReviews");
-                });
-
             modelBuilder.Entity("ShoeShopWebsite.Models.ProductSize", b =>
                 {
                     b.Property<int>("ProductSizeID")
@@ -931,25 +900,6 @@ namespace ShoeShopWebsite.Migrations
                     b.Navigation("Product");
                 });
 
-            modelBuilder.Entity("ShoeShopWebsite.Models.ProductReview", b =>
-                {
-                    b.HasOne("ShoeShopWebsite.Models.Product", "Product")
-                        .WithMany("ProductReviews")
-                        .HasForeignKey("ProductID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("ShoeShopWebsite.Models.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("ShoeShopWebsite.Models.ProductSize", b =>
                 {
                     b.HasOne("ShoeShopWebsite.Models.Product", "Product")
@@ -1027,8 +977,6 @@ namespace ShoeShopWebsite.Migrations
                     b.Navigation("ProductColors");
 
                     b.Navigation("ProductImages");
-
-                    b.Navigation("ProductReviews");
 
                     b.Navigation("ProductSizes");
                 });

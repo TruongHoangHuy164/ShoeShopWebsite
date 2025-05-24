@@ -121,10 +121,37 @@ namespace ShoeShopWebsite.Controllers
                     return View("Index", model);
                 }
 
-                Console.WriteLine($"[ProcessPayment] PaymentMethod received: {model.PaymentMethod}");
+                Console.WriteLine($"[Process оплаты] PaymentMethod received: {model.PaymentMethod}");
                 Console.WriteLine($"[ProcessPayment] FullName: {model.FullName}, PhoneNumber: {model.PhoneNumber}, AddressDetail: {model.AddressDetail}, Ward: {model.Ward}, District: {model.District}, Province: {model.Province}");
 
                 var fullAddress = $"{model.AddressDetail ?? ""}, {model.Ward ?? ""}, {model.District ?? ""}, {model.Province ?? ""}";
+
+                // Xử lý mã giảm giá
+                string discountCode = HttpContext.Session.GetString("DiscountCode");
+                decimal? discountAmount = null;
+                DiscountCode discount = null;
+
+                if (!string.IsNullOrEmpty(discountCode))
+                {
+                    discount = await _context.DiscountCodes
+                        .FirstOrDefaultAsync(dc => dc.Code == discountCode && dc.IsActive);
+
+                    if (discount != null && discount.ExpiryDate >= DateTime.Today && discount.StartDate <= DateTime.Today &&
+                        (discount.MaxUsage == 0 || discount.UsageCount < discount.MaxUsage))
+                    {
+                        var totalPrice = cartItems.Sum(c => c.Product.Price * c.Quantity);
+                        if (totalPrice >= discount.MinOrderValue)
+                        {
+                            discountAmount = HttpContext.Session.GetString("DiscountAmount") != null
+                                ? decimal.Parse(HttpContext.Session.GetString("DiscountAmount"))
+                                : 0;
+
+                            discount.UsageCount++;
+                            _context.DiscountCodes.Update(discount);
+                        }
+                    }
+                }
+
                 var order = new Order
                 {
                     SessionId = sessionId,
@@ -132,10 +159,12 @@ namespace ShoeShopWebsite.Controllers
                     Address = fullAddress,
                     PhoneNumber = model.PhoneNumber,
                     Note = model.Note ?? "",
-                    TotalPrice = cartItems.Sum(c => c.Product.Price * c.Quantity),
+                    TotalPrice = cartItems.Sum(c => c.Product.Price * c.Quantity) - (discountAmount ?? 0),
                     OrderDate = DateTime.Now,
                     Status = "Pending",
                     PaymentMethod = model.PaymentMethod,
+                    DiscountCode = discount,
+                    DiscountAmount = discountAmount,
                     OrderDetails = cartItems.Select(c => new OrderDetail
                     {
                         ProductID = c.ProductID,
@@ -179,6 +208,8 @@ namespace ShoeShopWebsite.Controllers
                     case "Cash":
                         order.Status = "Completed";
                         _context.Carts.RemoveRange(cartItems);
+                        HttpContext.Session.Remove("DiscountCode");
+                        HttpContext.Session.Remove("DiscountAmount");
                         await _context.SaveChangesAsync();
                         TempData["SuccessMessage"] = "Đặt hàng thành công (COD)!";
                         return RedirectToAction("OrderConfirmation", new { orderId = order.OrderID });
@@ -203,6 +234,8 @@ namespace ShoeShopWebsite.Controllers
                         if (momoResponse?.ErrorCode == 0)
                         {
                             _context.Carts.RemoveRange(cartItems);
+                            HttpContext.Session.Remove("DiscountCode");
+                            HttpContext.Session.Remove("DiscountAmount");
                             await _context.SaveChangesAsync();
                             return Redirect(momoResponse.PayUrl);
                         }
@@ -241,6 +274,8 @@ namespace ShoeShopWebsite.Controllers
                                 return View("Index", model);
                             }
                             _context.Carts.RemoveRange(cartItems);
+                            HttpContext.Session.Remove("DiscountCode");
+                            HttpContext.Session.Remove("DiscountAmount");
                             await _context.SaveChangesAsync();
                             HttpContext.Session.SetInt32("PendingOrderId", order.OrderID);
                             Console.WriteLine($"[VNPay] Saved PendingOrderId: {order.OrderID}");
@@ -274,6 +309,81 @@ namespace ShoeShopWebsite.Controllers
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApplyDiscountCode(string discountCode)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(discountCode))
+                {
+                    return Json(new { success = false, message = "Vui lòng nhập mã giảm giá." });
+                }
+
+                discountCode = discountCode.Trim().ToLowerInvariant();
+                var discount = await _context.DiscountCodes
+                    .FirstOrDefaultAsync(dc => dc.Code == discountCode && dc.IsActive);
+
+                if (discount == null)
+                {
+                    return Json(new { success = false, message = "Mã giảm giá không hợp lệ hoặc không tồn tại." });
+                }
+
+                var currentDate = DateTime.Today;
+                if (discount.ExpiryDate < currentDate || discount.StartDate > currentDate)
+                {
+                    return Json(new { success = false, message = "Mã giảm giá đã hết hạn hoặc chưa bắt đầu." });
+                }
+
+                if (discount.MaxUsage > 0 && discount.UsageCount >= discount.MaxUsage)
+                {
+                    return Json(new { success = false, message = "Mã giảm giá đã đạt giới hạn sử dụng." });
+                }
+
+                var sessionId = GetSessionId();
+                var cartItems = await _context.Carts
+                    .Include(c => c.Product)
+                    .Where(c => c.SessionId == sessionId)
+                    .ToListAsync();
+
+                if (!cartItems.Any())
+                {
+                    return Json(new { success = false, message = "Giỏ hàng trống." });
+                }
+
+                var totalPrice = cartItems.Sum(c => c.Product.Price * c.Quantity);
+                if (discount.MinOrderValue > 0 && totalPrice < discount.MinOrderValue)
+                {
+                    return Json(new { success = false, message = $"Đơn hàng phải có giá trị tối thiểu {discount.MinOrderValue:N0} đ để sử dụng mã này." });
+                }
+
+                decimal discountAmount = 0;
+                if (discount.DiscountType == DiscountTypeEnum.Percentage)
+                {
+                    discountAmount = totalPrice * (discount.DiscountValue / 100);
+                }
+                else if (discount.DiscountType == DiscountTypeEnum.Fixed)
+                {
+                    discountAmount = discount.DiscountValue;
+                }
+
+                if (discountAmount > totalPrice)
+                {
+                    discountAmount = totalPrice;
+                }
+
+                HttpContext.Session.SetString("DiscountCode", discount.Code);
+                HttpContext.Session.SetString("DiscountAmount", discountAmount.ToString());
+
+                return Json(new { success = true, message = $"Đã áp dụng mã giảm giá! Giảm {discountAmount:N0} đ.", discountAmount });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ApplyDiscountCode] Lỗi: {ex.Message}, StackTrace: {ex.StackTrace}");
+                return Json(new { success = false, message = $"Lỗi khi áp dụng mã giảm giá: {ex.Message}" });
+            }
+        }
+
         [HttpGet]
         public async Task<IActionResult> PaymentCallbackVnpay()
         {
@@ -285,7 +395,6 @@ namespace ShoeShopWebsite.Controllers
 
                 if (response.Success && response.VnPayResponseCode == "00")
                 {
-                    // Lấy OrderID từ vnp_OrderInfo
                     var orderInfo = Request.Query["vnp_OrderInfo"].ToString();
                     Console.WriteLine($"[VNPayCallback] vnp_OrderInfo: {orderInfo}");
 
@@ -308,12 +417,10 @@ namespace ShoeShopWebsite.Controllers
                         }
                     }
 
-                    // Lấy pendingOrderId từ session một lần duy nhất
                     var pendingOrderId = HttpContext.Session.GetInt32("PendingOrderId");
 
                     if (orderId == -1)
                     {
-                        // Thử lấy từ session nếu không phân tích được
                         if (pendingOrderId.HasValue)
                         {
                             orderId = pendingOrderId.Value;
@@ -327,7 +434,6 @@ namespace ShoeShopWebsite.Controllers
                         return Content("Lỗi: Không thể phân tích OrderID từ vnp_OrderInfo hoặc session.");
                     }
 
-                    // Tìm đơn hàng trong cơ sở dữ liệu, bao gồm chi tiết đơn hàng
                     var order = await _context.Orders
                         .Include(o => o.OrderDetails)
                             .ThenInclude(od => od.Product)
@@ -343,12 +449,10 @@ namespace ShoeShopWebsite.Controllers
                         return Content($"Lỗi: Không tìm thấy đơn hàng #{orderId}.");
                     }
 
-                    // Cập nhật trạng thái đơn hàng ngay sau khi xác nhận giao dịch thành công
                     order.Status = "Đã thanh toán";
                     await _context.SaveChangesAsync();
                     Console.WriteLine($"[VNPayCallback] Cập nhật trạng thái đơn hàng #{order.OrderID} thành công");
 
-                    // Kiểm tra session (tái sử dụng pendingOrderId)
                     if (pendingOrderId.HasValue && pendingOrderId.Value != orderId)
                     {
                         Console.WriteLine($"[VNPayCallback] PendingOrderId không khớp: Session={pendingOrderId.Value}, Callback={orderId}");
@@ -358,15 +462,12 @@ namespace ShoeShopWebsite.Controllers
                         Console.WriteLine($"[VNPayCallback] OrderID từ callback: {orderId}, PendingOrderId từ session: {pendingOrderId}");
                     }
 
-                    // So sánh số tiền (chỉ để ghi log, không chặn)
                     var vnpAmountRaw = decimal.Parse(Request.Query["vnp_Amount"]);
                     var vnpAmount = vnpAmountRaw / 100;
                     Console.WriteLine($"[VNPayCallback] So sánh số tiền: TotalPrice={order.TotalPrice}, vnp_Amount={vnpAmount}, Difference={Math.Abs(order.TotalPrice - vnpAmount)}");
 
-                    // Xóa PendingOrderId khỏi session
                     HttpContext.Session.Remove("PendingOrderId");
 
-                    // Kiểm tra file view tồn tại
                     var viewPath = Path.Combine(Directory.GetCurrentDirectory(), "Views", "Checkout", "PaymentCallbackVnpay.cshtml");
                     if (!System.IO.File.Exists(viewPath))
                     {
@@ -374,7 +475,6 @@ namespace ShoeShopWebsite.Controllers
                         return Content($"Lỗi: File view PaymentCallbackVnpay.cshtml không tồn tại tại {viewPath}.");
                     }
 
-                    // Hiển thị trang PaymentCallbackVnpay.cshtml, truyền đối tượng Order
                     Console.WriteLine("[VNPayCallback] Hiển thị trang PaymentCallbackVnpay.cshtml");
                     return View("~/Views/Checkout/PaymentCallbackVnpay.cshtml", order);
                 }

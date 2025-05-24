@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ShoeShopWebsite.Models;
 
@@ -11,9 +12,11 @@ using ShoeShopWebsite.Models;
 namespace ShoeShopWebsite.Migrations
 {
     [DbContext(typeof(NikeShopDbContext))]
-    partial class NikeShopDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250522011615_AddProductReview")]
+    partial class AddProductReview
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -934,7 +937,7 @@ namespace ShoeShopWebsite.Migrations
             modelBuilder.Entity("ShoeShopWebsite.Models.ProductReview", b =>
                 {
                     b.HasOne("ShoeShopWebsite.Models.Product", "Product")
-                        .WithMany("ProductReviews")
+                        .WithMany()
                         .HasForeignKey("ProductID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1027,8 +1030,6 @@ namespace ShoeShopWebsite.Migrations
                     b.Navigation("ProductColors");
 
                     b.Navigation("ProductImages");
-
-                    b.Navigation("ProductReviews");
 
                     b.Navigation("ProductSizes");
                 });

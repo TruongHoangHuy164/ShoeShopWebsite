@@ -1,0 +1,194 @@
+﻿
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background: linear-gradient(135deg, #e5e7eb, #f3f4f6);
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 70px;
+    background: linear-gradient(180deg, #1e3a8a, #3b82f6);
+    color: #ffffff;
+    padding: 20px 10px;
+    position: fixed;
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+    .sidebar:hover {
+        width: 220px;
+    }
+
+    .sidebar h2 {
+        font-size: 18px;
+        text-align: center;
+        margin-bottom: 20px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .sidebar:hover h2 {
+        opacity: 1;
+    }
+
+    .sidebar a {
+        display: flex;
+        align-items: center;
+        color: #e5e7eb;
+        padding: 12px;
+        text-decoration: none;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+        .sidebar a i {
+            font-size: 18px;
+            margin-right: 10px;
+            min-width: 20px;
+        }
+
+        .sidebar a:hover, .sidebar a.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            transform: scale(1.05);
+        }
+
+.content {
+    margin-left: 70px;
+    padding: 20px;
+    flex-grow: 1;
+    transition: margin-left 0.3s ease;
+}
+
+.sidebar:hover ~ .content {
+    margin-left: 220px;
+}
+
+.header {
+    background: #ffffff;
+    padding: 15px 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+    .header h1 {
+        font-size: 26px;
+        font-weight: 500;
+        color: #1e3a8a;
+        margin: 0;
+    }
+
+    .header p {
+        font-size: 14px;
+        color: #6b7280;
+        margin: 0;
+    }
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    transition: transform 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .stat-card h3 {
+        font-size: 16px;
+        font-weight: 400;
+        color: #6b7280;
+        margin-bottom: 10px;
+    }
+
+    .stat-card p {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1e3a8a;
+        margin: 0;
+    }
+
+.chart-section {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+    .chart-section h2 {
+        font-size: 20px;
+        font-weight: 500;
+        color: #1e3a8a;
+        margin-bottom: 15px;
+    }
+
+.chart-container {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        padding: 10px;
+    }
+
+        .sidebar h2, .sidebar a span {
+            display: none;
+        }
+
+        .sidebar:hover {
+            width: 100%;
+        }
+
+    .content {
+        margin-left: 0;
+    }
+
+    .sidebar:hover ~ .content {
+        margin-left: 0;
+    }
+}
+
+
