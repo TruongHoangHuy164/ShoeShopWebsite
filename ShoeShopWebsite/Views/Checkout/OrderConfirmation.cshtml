@@ -47,6 +47,10 @@
             Cảm ơn bạn đã mua sắm tại ShoeShopWebsite. Đơn hàng của bạn đang được xử lý.
         </div>
 
+        @if (TempData["EmailStatus"] != null)
+        {
+            <div class="alert alert-success">@TempData["EmailStatus"]</div>
+        }
         @if (TempData["SuccessMessage"] != null)
         {
             <div class="alert alert-success">@TempData["SuccessMessage"]</div>

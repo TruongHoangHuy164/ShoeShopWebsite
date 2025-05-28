@@ -47,7 +47,8 @@ namespace ShoeShopWebsite.Services
         {
             var subject = $"Xác nhận đơn hàng #{order.OrderId}";
             var body = BuildOrderEmailBody(order);
-            await SendEmailAsync(order.CustomerEmail, subject, body);
+            var email = order.CustomerEmail;
+            await SendEmailAsync(email, subject, body);
         }
 
         private string BuildOrderEmailBody(OrderEmailModel order)
