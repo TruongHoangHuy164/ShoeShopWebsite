@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -36,6 +36,7 @@
     <Folder Include="Areas\Employee\Models\" />
     <Folder Include="Areas\Employee\Views\Employee\" />
     <Folder Include="Migrations\" />
+    <Folder Include="Models\Email\" />
   </ItemGroup>
 
 </Project>

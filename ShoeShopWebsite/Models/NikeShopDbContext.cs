@@ -91,6 +91,19 @@ namespace ShoeShopWebsite.Models
             modelBuilder.Entity<DiscountCode>()
                 .Property(dc => dc.MinOrderValue)
                 .HasColumnType("decimal(18,2)");
+
+            modelBuilder.Entity<ProductReview>(entity =>
+            {
+                entity.ToTable("ProductReviews");
+                entity.HasKey(e => e.ReviewID);
+
+                entity.Property(e => e.UserID).IsRequired();
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserID)
+                    .HasConstraintName("FK_ProductReviews_Users");
+            });
         }
     }
 }

@@ -38,7 +38,6 @@
         </button>
     </div>
 </div>
-
 <!-- Sản phẩm nổi bật -->
 <div class="container mb-5">
     <div class="row">
@@ -53,15 +52,22 @@
                         {
                             <div class="product-item px-2" style="flex: 0 0 25%; min-width: 0;">
                                 <div class="card h-100 shadow-sm d-flex flex-column">
-                                    @if (product.ProductImages != null && product.ProductImages.Any())
-                                    {
-                                        var primaryImage = product.ProductImages.FirstOrDefault(img => img.IsPrimary) ?? product.ProductImages.First();
-                                        <img src="@primaryImage.ImageURL" class="card-img-top" alt="@product.ProductName" style="height: 300px; object-fit: cover;">
-                                    }
-                                    else
-                                    {
-                                        <img src="/images/no-image.png" class="card-img-top" alt="No Image" style="height: 200px; object-fit: cover;">
-                                    }
+                                    <div class="product-image-wrapper position-relative">
+                                        @if (product.ProductImages != null && product.ProductImages.Any())
+                                        {
+                                            var primaryImage = product.ProductImages.FirstOrDefault(img => img.IsPrimary) ?? product.ProductImages.First();
+                                            <img src="@primaryImage.ImageURL" class="card-img-top" alt="@product.ProductName" style="height: 300px; object-fit: cover;">
+                                        }
+                                        else
+                                        {
+                                            <img src="/images/no-image.png" class="card-img-top" alt="No Image" style="height: 300px; object-fit: cover;">
+                                        }
+                                        <div class="product-overlay">
+                                            <a href="@Url.Action("Details", "Product", new { id = product.ProductID })" class="details-icon">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        </div>
+                                    </div>
                                     <div class="card-body flex-grow-1 d-flex flex-column">
                                         <h5 class="card-title">@product.ProductName</h5>
                                         <p class="card-text product-description">
@@ -83,9 +89,6 @@
                                             </div>
                                         }
                                     </div>
-                                    <div class="card-footer text-center border-0 bg-transparent mt-auto d-flex justify-content-center gap-2">
-                                        <a href="@Url.Action("Details", "Product", new { id = product.ProductID })" class="btn btn-light btn-sm">Xem chi tiết</a>
-                                    </div>
                                 </div>
                             </div>
                         }
@@ -105,7 +108,6 @@
         </div>
     </div>
 </div>
-
 <!-- Banner phụ -->
 <div class="container-fluid p-0 mb-5">
     <div class="additional-banner">
@@ -190,6 +192,7 @@
 </div>
 
 <style>
+
     /* Banner chính */
     .carousel-inner {
         border-radius: 15px;
@@ -282,6 +285,78 @@
         line-height: 1.4;
     }
 
+    .product-image-wrapper {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .product-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5); /* Màu đen mờ */
+        opacity: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.3s ease;
+    }
+
+    .product-item:hover .product-overlay {
+        opacity: 1;
+    }
+
+    .details-icon {
+        color: #fff;
+        font-size: 2rem;
+        transition: transform 0.3s ease;
+    }
+
+        .details-icon:hover {
+            transform: scale(1.2);
+        }
+
+        .details-icon i {
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+    .custom-arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 40px;
+        height: 40px;
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 10;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+        .custom-arrow:hover {
+            background-color: #f8f9fa;
+            border-color: #aaa;
+        }
+
+    .products-prev {
+        left: 10px;
+    }
+
+    .products-next {
+        right: 10px;
+    }
+
+    .custom-arrow i {
+        font-size: 1.2rem;
+        color: #333;
+    }
     .custom-arrow {
         position: absolute;
         top: 50%;

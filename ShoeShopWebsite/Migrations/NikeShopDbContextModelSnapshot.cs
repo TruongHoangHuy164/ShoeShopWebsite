@@ -483,6 +483,10 @@ namespace ShoeShopWebsite.Migrations
                     b.Property<int?>("DiscountCodeID")
                         .HasColumnType("int");
 
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -609,9 +613,14 @@ namespace ShoeShopWebsite.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReviewID"));
 
+                    b.Property<int?>("ColorID")
+                        .HasColumnType("int");
+
                     b.Property<string>("Comment")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("OrderID")
+                        .HasColumnType("int");
 
                     b.Property<int>("ProductID")
                         .HasColumnType("int");
@@ -622,17 +631,26 @@ namespace ShoeShopWebsite.Migrations
                     b.Property<DateTime>("ReviewDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("SizeID")
+                        .HasColumnType("int");
+
                     b.Property<string>("UserID")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("ReviewID");
 
+                    b.HasIndex("ColorID");
+
+                    b.HasIndex("OrderID");
+
                     b.HasIndex("ProductID");
+
+                    b.HasIndex("SizeID");
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("ProductReviews");
+                    b.ToTable("ProductReviews", (string)null);
                 });
 
             modelBuilder.Entity("ShoeShopWebsite.Models.ProductSize", b =>
@@ -933,19 +951,40 @@ namespace ShoeShopWebsite.Migrations
 
             modelBuilder.Entity("ShoeShopWebsite.Models.ProductReview", b =>
                 {
+                    b.HasOne("ShoeShopWebsite.Models.Color", "Color")
+                        .WithMany()
+                        .HasForeignKey("ColorID");
+
+                    b.HasOne("ShoeShopWebsite.Models.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("ShoeShopWebsite.Models.Product", "Product")
                         .WithMany("ProductReviews")
                         .HasForeignKey("ProductID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("ShoeShopWebsite.Models.Size", "Size")
+                        .WithMany()
+                        .HasForeignKey("SizeID");
+
                     b.HasOne("ShoeShopWebsite.Models.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserID")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("FK_ProductReviews_Users");
+
+                    b.Navigation("Color");
+
+                    b.Navigation("Order");
 
                     b.Navigation("Product");
+
+                    b.Navigation("Size");
 
                     b.Navigation("User");
                 });

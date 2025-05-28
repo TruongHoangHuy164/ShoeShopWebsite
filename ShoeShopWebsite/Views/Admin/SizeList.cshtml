@@ -1,0 +1,317 @@
+﻿@model List<ShoeShopWebsite.Models.Size>
+
+@{
+    ViewData["Title"] = "Quản lý Kích thước - ShoeShopWebsite";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container product-list-container">
+    <h1>Quản lý Kích thước</h1>
+
+    <!-- Alerts -->
+    <div class="alert-container mb-4" id="alertContainer">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+    </div>
+
+    <div class="admin-product-list">
+        <div class="header d-flex justify-content-between align-items-center mb-4">
+            <h5 class="mb-0">Danh sách Kích thước</h5>
+            <div>
+                <a asp-action="CreateSize" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i> Thêm Kích thước
+                </a>
+                <a asp-action="SizeList" class="btn btn-back">
+                    <i class="fas fa-sync-alt me-1"></i> Làm mới
+                </a>
+            </div>
+        </div>
+
+        <!-- Filters and Search -->
+        <form method="get" asp-action="SizeList" class="row mb-4">
+            <div class="col-md-4 mb-2">
+                <input type="text" name="search" id="searchInput" class="form-control" placeholder="Tìm kiếm kích thước..." value="@ViewBag.Search">
+            </div>
+            <div class="col-md-2 mb-2">
+                <button type="submit" class="btn btn-add w-100">Tìm kiếm</button>
+            </div>
+        </form>
+
+        <!-- Table -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="sizeTable">
+                <thead>
+                    <tr>
+                        <th>Tên Kích thước</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Any())
+                    {
+                        foreach (var size in Model)
+                        {
+                            <tr data-id="@size.SizeID">
+                                <td>@size.SizeName</td>
+                                <td>
+                                    <a asp-action="EditSize" asp-route-id="@size.SizeID" class="btn btn-edit btn-sm" title="Sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form asp-action="DeleteSize" asp-route-id="@size.SizeID" method="post" style="display:inline;" id="deleteForm_@size.SizeID">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-delete btn-sm delete-size" title="Xóa">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="2" class="text-center text-muted py-3">
+                                <i class="fas fa-exclamation-circle me-1"></i> Không tìm thấy kích thước nào.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        @{
+            int page = ViewBag.Page ?? 1;
+            int pageSize = ViewBag.PageSize ?? 10;
+            int totalItems = ViewBag.TotalItems ?? 0;
+            int totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+        }
+        @if (totalPages > 1)
+        {
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center mt-3">
+                    <li class="page-item @(page == 1 ? "disabled" : "")">
+                        <a class="page-link" asp-action="SizeList" asp-route-page="@(page - 1)" asp-route-pageSize="@pageSize" asp-route-search="@ViewBag.Search" aria-label="Previous">
+                            <span aria-hidden="true">«</span>
+                        </a>
+                    </li>
+                    @for (int i = Math.Max(1, page - 2); i <= Math.Min(totalPages, page + 2); i++)
+                    {
+                        <li class="page-item @(i == page ? "active" : "")">
+                            <a class="page-link" asp-action="SizeList" asp-route-page="@i" asp-route-pageSize="@pageSize" asp-route-search="@ViewBag.Search">@i</a>
+                        </li>
+                    }
+                    <li class="page-item @(page == totalPages ? "disabled" : "")">
+                        <a class="page-link" asp-action="SizeList" asp-route-page="@(page + 1)" asp-route-pageSize="@pageSize" asp-route-search="@ViewBag.Search" aria-label="Next">
+                            <span aria-hidden="true">»</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        }
+
+        <!-- Back Button -->
+        <a asp-action="AdminDashboard" asp-controller="Admin" class="btn btn-back mt-3">Quay lại Dashboard</a>
+    </div>
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <style>
+        .product-list-container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 30px;
+            color: #1a1a1a;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e5e5e5;
+            padding-bottom: 10px;
+        }
+
+        .table th, .table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e5e5e5;
+            color: #333;
+            vertical-align: middle;
+        }
+
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 13px;
+        }
+
+        .table tr:hover {
+            background-color: #f1f3f5;
+        }
+
+        .btn {
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-add {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+        }
+
+            .btn-add:hover {
+                background-color: #0056b3;
+            }
+
+        .btn-edit {
+            background-color: #ffc107;
+            color: #212529;
+            border: none;
+        }
+
+            .btn-edit:hover {
+                background-color: #e0a800;
+            }
+
+        .btn-delete {
+            background-color: #dc3545;
+            color: #fff;
+            border: none;
+        }
+
+            .btn-delete:hover {
+                background-color: #b02a37;
+            }
+
+        .btn-back {
+            background-color: #6c757d;
+            color: #fff;
+        }
+
+            .btn-back:hover {
+                background-color: #5a6268;
+            }
+
+        .form-control, .form-select {
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+            .form-control:focus, .form-select:focus {
+                border-color: #007bff;
+                box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+            }
+
+        .alert {
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+
+        .pagination .page-link {
+            color: #007bff;
+            border-radius: 6px;
+            margin: 0 3px;
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+        .pagination .page-item.disabled .page-link {
+            color: #6c757d;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function () {
+            // Fade out alerts after 4 seconds
+            $('#alertContainer').on('click', '.alert .btn-close', function () {
+                $(this).closest('.alert').remove();
+            });
+            $('.alert').delay(4000).fadeOut(300);
+
+            // Xử lý tìm kiếm theo thời gian thực
+            $('#searchInput').on('input', function () {
+                if ($(this).val().length > 2 || $(this).val().length === 0) {
+                    $(this).closest('form').submit();
+                }
+            });
+
+            // Xóa kích thước
+            $('.delete-size').on('click', function (e) {
+                e.preventDefault();
+                const form = $(this).closest('form');
+                const id = form.attr('id').split('_')[1];
+                if (!confirm('Bạn có chắc muốn xóa kích thước này?')) return;
+
+                $.ajax({
+                    url: '/Admin/DeleteSize/' + id,
+                    type: 'POST',
+                    data: form.serialize(),
+                    success: function (response) {
+                        if (response.success) {
+                            $(`tr[data-id="${id}"]`).remove();
+                            showAlert('success', response.message || 'Xóa kích thước thành công!');
+                            if ($('#sizeTable tbody tr').length === 0) {
+                                $('#sizeTable tbody').html('<tr><td colspan="2" class="text-center text-muted py-3"><i class="fas fa-exclamation-circle me-1"></i> Không tìm thấy kích thước nào.</td></tr>');
+                            }
+                        } else {
+                            showAlert('danger', response.error || 'Lỗi khi xóa kích thước.');
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        showAlert('danger', 'Lỗi server: ' + error);
+                    }
+                });
+            });
+
+            // Hàm hiển thị thông báo
+            function showAlert(type, message) {
+                const alertHtml = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>`;
+                $('#alertContainer').html(alertHtml).show();
+                $('.alert').delay(4000).fadeOut(300);
+            }
+        });
+    </script>
+}

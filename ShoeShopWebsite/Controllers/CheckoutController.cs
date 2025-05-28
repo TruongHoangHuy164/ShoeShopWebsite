@@ -8,8 +8,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using ShoeShopWebsite.Services.NewFolder;
-using Azure;
+using ShoeShopWebsite.Services;
 using System.IO;
 
 namespace ShoeShopWebsite.Controllers
@@ -17,14 +16,14 @@ namespace ShoeShopWebsite.Controllers
     public class CheckoutController : Controller
     {
         private readonly NikeShopDbContext _context;
-        private readonly IMomoService _momoService;
         private readonly IVNPayService _vnpayService;
+        private readonly IEmailService _emailService;
 
-        public CheckoutController(NikeShopDbContext context, IMomoService momoService, IVNPayService vnpayService)
+        public CheckoutController(NikeShopDbContext context, IVNPayService vnpayService, IEmailService emailService)
         {
             _context = context;
-            _momoService = momoService;
             _vnpayService = vnpayService;
+            _emailService = emailService;
         }
 
         private string GetSessionId()
@@ -114,15 +113,19 @@ namespace ShoeShopWebsite.Controllers
                     return View("Index", model);
                 }
 
+                if (string.IsNullOrEmpty(model.Email))
+                {
+                    ModelState.AddModelError("Email", "Email là bắt buộc.");
+                    model.CartItems = cartItems;
+                    return View("Index", model);
+                }
+
                 if (string.IsNullOrEmpty(model.PaymentMethod))
                 {
                     TempData["ErrorMessage"] = "Phương thức thanh toán không được để trống!";
                     model.CartItems = cartItems;
                     return View("Index", model);
                 }
-
-                Console.WriteLine($"[Process оплаты] PaymentMethod received: {model.PaymentMethod}");
-                Console.WriteLine($"[ProcessPayment] FullName: {model.FullName}, PhoneNumber: {model.PhoneNumber}, AddressDetail: {model.AddressDetail}, Ward: {model.Ward}, District: {model.District}, Province: {model.Province}");
 
                 var fullAddress = $"{model.AddressDetail ?? ""}, {model.Ward ?? ""}, {model.District ?? ""}, {model.Province ?? ""}";
 
@@ -156,6 +159,7 @@ namespace ShoeShopWebsite.Controllers
                 {
                     SessionId = sessionId,
                     FullName = model.FullName,
+                    Email = model.Email,
                     Address = fullAddress,
                     PhoneNumber = model.PhoneNumber,
                     Note = model.Note ?? "",
@@ -211,37 +215,40 @@ namespace ShoeShopWebsite.Controllers
                         HttpContext.Session.Remove("DiscountCode");
                         HttpContext.Session.Remove("DiscountAmount");
                         await _context.SaveChangesAsync();
-                        TempData["SuccessMessage"] = "Đặt hàng thành công (COD)!";
-                        return RedirectToAction("OrderConfirmation", new { orderId = order.OrderID });
 
-                    case "MoMo":
-                        var orderInfo = new OrderInfoModel
+                        // Gửi email xác nhận đơn hàng
+                        var orderEmail = new OrderEmailModel
                         {
-                            OrderId = order.OrderID.ToString(),
-                            FullName = order.FullName,
-                            Amount = order.TotalPrice,
-                            OrderInfo = $"Thanh toán đơn hàng #{order.OrderID}"
+                            OrderId = order.OrderID,
+                            CustomerName = order.FullName,
+                            CustomerEmail = order.Email,
+                            OrderDate = order.OrderDate,
+                            TotalAmount = order.TotalPrice,
+                            ShippingAddress = order.Address,
+                            PaymentMethod = "Thanh toán khi nhận hàng (COD)",
+                            Items = order.OrderDetails.Select(od => new OrderItemEmailModel
+                            {
+                                ProductName = od.Product.ProductName,
+                                Quantity = od.Quantity,
+                                Price = od.Price,
+                                Size = od.Size?.SizeName ?? "N/A",
+                                Color = od.Color?.ColorName ?? "N/A"
+                            }).ToList()
                         };
 
-                        if (orderInfo.Amount < 1000 || orderInfo.Amount > 50000000)
+                        try
                         {
-                            TempData["ErrorMessage"] = "Số tiền không hợp lệ cho MoMo. Phải từ 1,000 đến 50,000,000 VND.";
-                            model.CartItems = cartItems;
-                            return View("Index", model);
+                            await _emailService.SendOrderConfirmationEmailAsync(orderEmail);
+                            TempData["EmailStatus"] = "Email xác nhận đơn hàng đã được gửi.";
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[ProcessPayment] Lỗi gửi email: {ex.Message}");
+                            TempData["EmailStatus"] = "Không thể gửi email xác nhận. Vui lòng kiểm tra lại.";
                         }
 
-                        var momoResponse = await _momoService.CreatePaymentAsync(orderInfo);
-                        if (momoResponse?.ErrorCode == 0)
-                        {
-                            _context.Carts.RemoveRange(cartItems);
-                            HttpContext.Session.Remove("DiscountCode");
-                            HttpContext.Session.Remove("DiscountAmount");
-                            await _context.SaveChangesAsync();
-                            return Redirect(momoResponse.PayUrl);
-                        }
-                        TempData["ErrorMessage"] = $"Thanh toán MoMo thất bại: {momoResponse?.Message ?? "Không có thông tin lỗi"}";
-                        model.CartItems = cartItems;
-                        return View("Index", model);
+                        TempData["SuccessMessage"] = "Đặt hàng thành công (COD)!";
+                        return RedirectToAction("OrderConfirmation", new { orderId = order.OrderID });
 
                     case "VNPay":
                         var totalPrice = cartItems.Sum(c => c.Product.Price * c.Quantity);
@@ -306,81 +313,6 @@ namespace ShoeShopWebsite.Controllers
                     .Where(c => c.SessionId == sessionId)
                     .ToListAsync();
                 return View("Index", model);
-            }
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ApplyDiscountCode(string discountCode)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(discountCode))
-                {
-                    return Json(new { success = false, message = "Vui lòng nhập mã giảm giá." });
-                }
-
-                discountCode = discountCode.Trim().ToLowerInvariant();
-                var discount = await _context.DiscountCodes
-                    .FirstOrDefaultAsync(dc => dc.Code == discountCode && dc.IsActive);
-
-                if (discount == null)
-                {
-                    return Json(new { success = false, message = "Mã giảm giá không hợp lệ hoặc không tồn tại." });
-                }
-
-                var currentDate = DateTime.Today;
-                if (discount.ExpiryDate < currentDate || discount.StartDate > currentDate)
-                {
-                    return Json(new { success = false, message = "Mã giảm giá đã hết hạn hoặc chưa bắt đầu." });
-                }
-
-                if (discount.MaxUsage > 0 && discount.UsageCount >= discount.MaxUsage)
-                {
-                    return Json(new { success = false, message = "Mã giảm giá đã đạt giới hạn sử dụng." });
-                }
-
-                var sessionId = GetSessionId();
-                var cartItems = await _context.Carts
-                    .Include(c => c.Product)
-                    .Where(c => c.SessionId == sessionId)
-                    .ToListAsync();
-
-                if (!cartItems.Any())
-                {
-                    return Json(new { success = false, message = "Giỏ hàng trống." });
-                }
-
-                var totalPrice = cartItems.Sum(c => c.Product.Price * c.Quantity);
-                if (discount.MinOrderValue > 0 && totalPrice < discount.MinOrderValue)
-                {
-                    return Json(new { success = false, message = $"Đơn hàng phải có giá trị tối thiểu {discount.MinOrderValue:N0} đ để sử dụng mã này." });
-                }
-
-                decimal discountAmount = 0;
-                if (discount.DiscountType == DiscountTypeEnum.Percentage)
-                {
-                    discountAmount = totalPrice * (discount.DiscountValue / 100);
-                }
-                else if (discount.DiscountType == DiscountTypeEnum.Fixed)
-                {
-                    discountAmount = discount.DiscountValue;
-                }
-
-                if (discountAmount > totalPrice)
-                {
-                    discountAmount = totalPrice;
-                }
-
-                HttpContext.Session.SetString("DiscountCode", discount.Code);
-                HttpContext.Session.SetString("DiscountAmount", discountAmount.ToString());
-
-                return Json(new { success = true, message = $"Đã áp dụng mã giảm giá! Giảm {discountAmount:N0} đ.", discountAmount });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ApplyDiscountCode] Lỗi: {ex.Message}, StackTrace: {ex.StackTrace}");
-                return Json(new { success = false, message = $"Lỗi khi áp dụng mã giảm giá: {ex.Message}" });
             }
         }
 
@@ -452,6 +384,37 @@ namespace ShoeShopWebsite.Controllers
                     order.Status = "Đã thanh toán";
                     await _context.SaveChangesAsync();
                     Console.WriteLine($"[VNPayCallback] Cập nhật trạng thái đơn hàng #{order.OrderID} thành công");
+
+                    // Gửi email xác nhận đơn hàng
+                    var orderEmail = new OrderEmailModel
+                    {
+                        OrderId = order.OrderID,
+                        CustomerName = order.FullName,
+                        CustomerEmail = order.Email,
+                        OrderDate = order.OrderDate,
+                        TotalAmount = order.TotalPrice,
+                        ShippingAddress = order.Address,
+                        PaymentMethod = "VNPay",
+                        Items = order.OrderDetails.Select(od => new OrderItemEmailModel
+                        {
+                            ProductName = od.Product.ProductName,
+                            Quantity = od.Quantity,
+                            Price = od.Price,
+                            Size = od.Size?.SizeName ?? "N/A",
+                            Color = od.Color?.ColorName ?? "N/A"
+                        }).ToList()
+                    };
+
+                    try
+                    {
+                        await _emailService.SendOrderConfirmationEmailAsync(orderEmail);
+                        TempData["EmailStatus"] = "Email xác nhận đơn hàng đã được gửi.";
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[PaymentCallbackVnpay] Lỗi gửi email: {ex.Message}");
+                        TempData["EmailStatus"] = "Không thể gửi email xác nhận. Vui lòng kiểm tra lại.";
+                    }
 
                     if (pendingOrderId.HasValue && pendingOrderId.Value != orderId)
                     {
@@ -535,6 +498,7 @@ namespace ShoeShopWebsite.Controllers
             ViewBag.SuccessMessage = TempData["SuccessMessage"]?.ToString() ?? "Thanh toán thành công!";
             ViewBag.OrderId = order.OrderID;
             ViewBag.Amount = order.TotalPrice;
+            ViewBag.EmailStatus = TempData["EmailStatus"]?.ToString();
             return View();
         }
 
@@ -579,6 +543,81 @@ namespace ShoeShopWebsite.Controllers
             var count = await _context.Orders
                 .CountAsync(o => o.SessionId == sessionId);
             return Json(count);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApplyDiscountCode(string discountCode)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(discountCode))
+                {
+                    return Json(new { success = false, message = "Vui lòng nhập mã giảm giá." });
+                }
+
+                discountCode = discountCode.Trim().ToLowerInvariant();
+                var discount = await _context.DiscountCodes
+                    .FirstOrDefaultAsync(dc => dc.Code == discountCode && dc.IsActive);
+
+                if (discount == null)
+                {
+                    return Json(new { success = false, message = "Mã giảm giá không hợp lệ hoặc không tồn tại." });
+                }
+
+                var currentDate = DateTime.Today;
+                if (discount.ExpiryDate < currentDate || discount.StartDate > currentDate)
+                {
+                    return Json(new { success = false, message = "Mã giảm giá đã hết hạn hoặc chưa bắt đầu." });
+                }
+
+                if (discount.MaxUsage > 0 && discount.UsageCount >= discount.MaxUsage)
+                {
+                    return Json(new { success = false, message = "Mã giảm giá đã đạt giới hạn sử dụng." });
+                }
+
+                var sessionId = GetSessionId();
+                var cartItems = await _context.Carts
+                    .Include(c => c.Product)
+                    .Where(c => c.SessionId == sessionId)
+                    .ToListAsync();
+
+                if (!cartItems.Any())
+                {
+                    return Json(new { success = false, message = "Giỏ hàng trống." });
+                }
+
+                var totalPrice = cartItems.Sum(c => c.Product.Price * c.Quantity);
+                if (discount.MinOrderValue > 0 && totalPrice < discount.MinOrderValue)
+                {
+                    return Json(new { success = false, message = $"Đơn hàng phải có giá trị tối thiểu {discount.MinOrderValue:N0} đ để sử dụng mã này." });
+                }
+
+                decimal discountAmount = 0;
+                if (discount.DiscountType == DiscountTypeEnum.Percentage)
+                {
+                    discountAmount = totalPrice * (discount.DiscountValue / 100);
+                }
+                else if (discount.DiscountType == DiscountTypeEnum.Fixed)
+                {
+                    discountAmount = discount.DiscountValue;
+                }
+
+                if (discountAmount > totalPrice)
+                {
+                    discountAmount = totalPrice;
+                }
+
+                HttpContext.Session.SetString("DiscountCode", discount.Code);
+                HttpContext.Session.SetString("DiscountAmount", discountAmount.ToString());
+
+                return Json(new { success = true, message = $"Đã áp dụng mã giảm giá! Giảm {discountAmount:N0} đ.", discountAmount });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ApplyDiscountCode] Lỗi: {ex.Message}, StackTrace: {ex.StackTrace}");
+                return Json(new { success = false, message = $"Lỗi khi áp dụng mã giảm giá: {ex.Message}" });
+            }
         }
     }
 }

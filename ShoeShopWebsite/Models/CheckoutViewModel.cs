@@ -25,6 +25,9 @@ namespace ShoeShopWebsite.Models
         [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại phải bắt đầu bằng 0 và có đúng 10 chữ số.")]
         public string? PhoneNumber { get; set; }
 
+        [Required(ErrorMessage = "Email là bắt buộc.")]
+        [EmailAddress(ErrorMessage = "Địa chỉ email không hợp lệ.")]
+        public string? Email { get; set; }
         public string? Note { get; set; }
 
         [Required(ErrorMessage = "Phương thức thanh toán là bắt buộc.")]

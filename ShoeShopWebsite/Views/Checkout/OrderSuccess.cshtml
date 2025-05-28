@@ -1,28 +1,48 @@
-﻿@model dynamic
-
-@{
+﻿@{
     ViewData["Title"] = "Thanh toán thành công";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h2>Thanh toán thành công</h2>
+<div class="container mt-5">
+    <h2>Thanh toán thành công</h2>
 
-<div class="alert alert-success">
-    <strong>@ViewBag.SuccessMessage</strong>
-</div>
+    <div class="alert alert-success">
+        <strong>@ViewBag.SuccessMessage</strong>
+    </div>
 
-<div class="order-details">
-    <h4>Chi tiết đơn hàng</h4>
-    <p><strong>Mã đơn hàng:</strong> @ViewBag.OrderId</p>
-    <p><strong>Số tiền:</strong> @String.Format("{0:N0}", ViewBag.Amount) VND</p>
-</div>
-
-<a href="@Url.Action("Index", "Home")" class="btn btn-primary">Quay lại trang chủ</a>
-
-<style>
-    .order-details {
-        margin-top: 20px;
-        padding: 15px;
-        border: 1px solid #ddd;
-        border-radius: 5px;
+    @if (ViewBag.EmailStatus != null)
+    {
+        <div class="alert @(ViewBag.EmailStatus.Contains("thành công") ? "alert-success" : "alert-warning")">
+            @ViewBag.EmailStatus
+        </div>
     }
-</style>
+
+    <div class="order-details">
+        <h4>Chi tiết đơn hàng</h4>
+        <p><strong>Mã đơn hàng:</strong> @ViewBag.OrderId</p>
+        <p><strong>Số tiền:</strong> @String.Format("{0:N0}", ViewBag.Amount) VND</p>
+    </div>
+
+    <a href="@Url.Action("Index", "Home")" class="btn btn-primary">Quay lại trang chủ</a>
+</div>
+
+@section Styles {
+    <style>
+        .container {
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .order-details {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            text-align: left;
+        }
+
+        .alert {
+            margin-top: 10px;
+        }
+    </style>
+}

@@ -8,95 +8,117 @@
 <div class="container mt-5">
     <h2 class="mb-4">Danh sách đơn hàng của bạn</h2>
 
-    @if (Model.Any())
+    @if (User.Identity.IsAuthenticated)
     {
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Mã đơn hàng</th>
-                    <th>Ngày đặt</th>
-                    <th>Tổng tiền</th>
-                    <th>Phương thức thanh toán</th>
-                    <th>Trạng thái</th>
-                    <th>Tiến độ</th>
-                    <th>Hành động</th>
-                    <th>Đánh giá</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var order in Model)
-                {
-                    var progressPercentage = 0;
-                    var progressColor = "#f0f0f0";
-                    switch (order.Status.ToLower())
-                    {
-                        case "pending":
-                            progressPercentage = 25;
-                            progressColor = "#4CAF50";
-                            break;
-                        case "confirmed":
-                            progressPercentage = 50;
-                            progressColor = "#4CAF50";
-                            break;
-                        case "delivering":
-                            progressPercentage = 75;
-                            progressColor = "#4CAF50";
-                            break;
-                        case "completed":
-                            progressPercentage = 100;
-                            progressColor = "#4CAF50";
-                            break;
-                        case "failed":
-                            progressPercentage = 0;
-                            progressColor = "#f0f0f0";
-                            break;
-                    }
+        @if (Model.Any())
+        {
+            <table class="table table-bordered">
+                <thead>
                     <tr>
-                        <td>#@order.OrderID</td>
-                        <td>@order.OrderDate.ToString("dd/MM/yyyy HH:mm")</td>
-                        <td>@order.TotalPrice.ToString("N0") đ</td>
-                        <td>@order.PaymentMethod</td>
-                        <td><span class="status @order.Status.ToLower()">@order.Status</span></td>
-                        <td>
-                            <div class="progress-container">
-                                <div class="progress-bar" style="width: @progressPercentage%; background-color: @progressColor;">
-                                    <span class="progress-text">@progressPercentage%</span>
+                        <th>Mã đơn hàng</th>
+                        <th>Ngày đặt</th>
+                        <th>Tổng tiền</th>
+                        <th>Phương thức thanh toán</th>
+                        <th>Trạng thái</th>
+                        <th>Tiến độ</th>
+                        <th>Hành động</th>
+                        <th>Đánh giá</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in Model)
+                    {
+                        var progressPercentage = 0;
+                        var progressColor = "#f0f0f0";
+                        switch (order.Status.ToLower())
+                        {
+                            case "pending":
+                                progressPercentage = 25;
+                                progressColor = "#4CAF50";
+                                break;
+                            case "confirmed":
+                                progressPercentage = 50;
+                                progressColor = "#4CAF50";
+                                break;
+                            case "delivering":
+                                progressPercentage = 75;
+                                progressColor = "#4CAF50";
+                                break;
+                            case "completed":
+                                progressPercentage = 100;
+                                progressColor = "#4CAF50";
+                                break;
+                            case "failed":
+                                progressPercentage = 0;
+                                progressColor = "#f0f0f0";
+                                break;
+                        }
+                        <tr>
+                            <td>#@order.OrderID</td>
+                            <td>@order.OrderDate.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@order.TotalPrice.ToString("N0") đ</td>
+                            <td>@order.PaymentMethod</td>
+                            <td><span class="status @order.Status.ToLower()">@order.Status</span></td>
+                            <td>
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: @progressPercentage%; background-color: @progressColor;">
+                                        <span class="progress-text">@progressPercentage%</span>
+                                    </div>
                                 </div>
-                            </div>
-                        </td>
-                        <td>
-                            <a asp-action="OrderConfirmation" asp-route-orderId="@order.OrderID" class="btn btn-primary btn-sm">Xem chi tiết</a>
-                        </td>
-                        <td>
-                            @if (order.Status.ToLower() == "completed")
-                            {
-                                var orderDetails = await _context.OrderDetails
-                                .Where(od => od.OrderID == order.OrderID)
-                                .Include(od => od.Product)
-                                .ToListAsync();
-
-                                foreach (var detail in orderDetails)
+                            </td>
+                            <td>
+                                <a asp-action="OrderConfirmation" asp-route-orderId="@order.OrderID" class="btn btn-primary btn-sm">Xem chi tiết</a>
+                            </td>
+                            <td>
+                                @if (order.Status.ToLower() == "completed")
                                 {
-                                    var hasReviewed = await _context.ProductReviews
-                                    .AnyAsync(r => r.ProductID == detail.ProductID && r.UserID == User.Identity.Name);
+                                    var orderDetails = await _context.OrderDetails
+                                    .Where(od => od.OrderID == order.OrderID)
+                                    .Include(od => od.Product)
+                                    .Include(od => od.Size)
+                                    .Include(od => od.Color)
+                                    .ToListAsync();
 
-                                    if (!hasReviewed)
+                                    foreach (var detail in orderDetails)
                                     {
-                                        <a asp-controller="Product" asp-action="AddReview" asp-route-productId="@detail.ProductID" class="btn btn-success btn-sm mt-1">Đánh giá</a>
+                                        var hasReviewed = await _context.ProductReviews
+                                        .AnyAsync(r => r.ProductID == detail.ProductID && r.UserID == User.Identity.Name && r.OrderID == order.OrderID);
+
+                                        if (!hasReviewed)
+                                        {
+                                            var reviewUrl = Url.Action("AddReview", "Product", new
+                                            {
+                                                productId = detail.ProductID,
+                                                orderId = order.OrderID,
+                                                sizeId = detail.SizeID != null ? detail.SizeID : -1,
+                                                colorId = detail.ColorID.HasValue ? detail.ColorID.Value : -1
+                                            });
+                                            <a href="@reviewUrl" class="btn btn-success btn-sm mt-1"
+                                               onclick="console.log('Navigating to: @reviewUrl, User: @User.Identity.Name')">Đánh giá</a>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Đã đánh giá</span>
+                                        }
                                     }
                                 }
-                            }
-                        </td>
-                    </tr>
-                
-                }
-            </tbody>
-        </table>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                Bạn chưa có đơn hàng nào.
+            </div>
+        }
     }
     else
     {
-        <div class="alert alert-info">
-            Bạn chưa có đơn hàng nào.
+        <div class="alert alert-warning">
+            Vui lòng <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@Url.Action("MyOrders", "Product")">đăng nhập</a> để xem đơn hàng và đánh giá.
         </div>
     }
 
@@ -159,17 +181,6 @@
             font-size: 14px;
         }
 
-        .btn-warning {
-            background-color: #FFC107;
-            border-color: #FFC107;
-            color: #000;
-        }
-
-        .alert-info {
-            background-color: #E3F2FD;
-            color: #2196F3;
-        }
-
         .progress-container {
             width: 100%;
             height: 20px;
@@ -195,95 +206,10 @@
             font-size: 12px;
             font-weight: 500;
         }
-
-        .review-info {
-            background-color: #f8f9fa;
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .star-rating {
-            display: flex;
-            direction: rtl;
-            justify-content: flex-start;
-        }
-
-            .star-rating input[type="radio"] {
-                display: none;
-            }
-
-            .star-rating label {
-                font-size: 24px;
-                color: #ddd;
-                cursor: pointer;
-                transition: color 0.2s;
-            }
-
-                .star-rating input[type="radio"]:checked ~ label,
-                .star-rating label:hover,
-                .star-rating label:hover ~ label {
-                    color: #FFC107;
-                }
-
-        .modal-body .product-info img {
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-
-        .btn-info {
-            padding: 5px 10px;
-            font-size: 14px;
-        }
     </style>
 }
 
 @section Scripts {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        $(document).ready(function () {
-            // Khi nút Đánh giá được nhấn, điền thông tin sản phẩm vào modal
-            $('.review-btn').on('click', function () {
-                var productId = $(this).data('product-id');
-                var productName = $(this).data('product-name');
-                var productImage = $(this).data('product-image');
-                var productSize = $(this).data('size');
-                var productColor = $(this).data('color');
-
-                $('#productId').val(productId);
-                $('#productName').text(productName);
-                $('#productImage').attr('src', productImage || '/images/placeholder.jpg');
-                $('#productSize').text(productSize);
-                $('#productColor').text(productColor);
-            });
-
-            // Xử lý gửi form đánh giá
-            $('#reviewForm').on('submit', function (e) {
-                e.preventDefault();
-                var formData = $(this).serialize();
-
-                $.ajax({
-                    url: '@Url.Action("SubmitReview", "Product")',
-                    type: 'POST',
-                    data: formData,
-                    headers: {
-                        RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                    },
-                    success: function (response) {
-                        if (response.success) {
-                            alert(response.message);
-                            $('#reviewModal').modal('hide');
-                            location.reload(); // Tải lại trang để cập nhật trạng thái đánh giá
-                        } else {
-                            alert(response.message);
-                        }
-                    },
-                    error: function () {
-                        alert('Đã có lỗi xảy ra khi gửi đánh giá.');
-                    }
-                });
-            });
-        });
-    </script>
 }

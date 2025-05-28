@@ -1,0 +1,20 @@
+﻿@model List<ShoeShopWebsite.Models.ProductReview>
+
+@foreach (var review in Model)
+{
+    <div class="review-item mb-3 p-3 border rounded" data-rating="@review.Rating">
+        <div class="d-flex justify-content-between">
+            <strong>@(review.User?.FullName ?? review.User?.UserName)</strong>
+            <span>@review.ReviewDate.ToString("dd/MM/yyyy HH:mm")</span>
+        </div>
+        <div class="rating">
+            @for (int i = 1; i <= 5; i++)
+            {
+                <i class="fas fa-star @(i <= review.Rating ? "text-warning" : "text-muted")"></i>
+            }
+        </div>
+        <p class="mt-2">@(string.IsNullOrEmpty(review.Comment) ? "Không có bình luận" : review.Comment)</p>
+        <p class="text-muted">Kích cỡ: @(review.Size?.SizeName ?? "N/A")</p>
+        <p class="text-muted">Màu sắc: @(review.Color?.ColorName ?? "N/A")</p>
+    </div>
+}

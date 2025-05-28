@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -82,32 +83,231 @@ namespace ShoeShopWebsite.Controllers
 
         // Các action khác giữ nguyên
         // GET: Product/Details/5
-        public async Task<IActionResult> Details(int? id)
+        [HttpGet]
+        [Route("Details/{id}")]
+        public async Task<IActionResult> Details(int id)
         {
-            if (id == null) return NotFound();
-
             var product = await _context.Products
                 .Include(p => p.Category)
                 .Include(p => p.ProductImages)
                 .Include(p => p.ProductSizes).ThenInclude(ps => ps.Size)
                 .Include(p => p.ProductColors).ThenInclude(pc => pc.Color)
-                .FirstOrDefaultAsync(m => m.ProductID == id);
+                .Include(p => p.ProductReviews).ThenInclude(pr => pr.Size)
+                .Include(p => p.ProductReviews).ThenInclude(pr => pr.Color)
+                .FirstOrDefaultAsync(p => p.ProductID == id);
 
-            if (product == null) return NotFound();
+            if (product == null)
+            {
+                return NotFound();
+            }
 
-            var reviews = await _context.ProductReviews
-                .Where(r => r.ProductID == id)
+            ViewData["Reviews"] = product.ProductReviews.ToList();
+            return View("~/Views/Product/Details.cshtml", product);
+        }
+
+        // GET: Product/AddReview
+        [HttpGet]
+        [Route("AddReview")]
+        [Authorize]
+        public async Task<IActionResult> AddReview(int productId, int orderId, int sizeId, int colorId)
+        {
+            // Kiểm tra đăng nhập (không cần vì [Authorize] đảm bảo)
+            var userId = User.Identity.Name;
+
+            // Kiểm tra đơn hàng
+            var orderDetail = await _context.OrderDetails
+                .Include(od => od.Product)
+                .Include(od => od.Size)
+                .Include(od => od.Color)
+                .Include(od => od.Order)
+                .FirstOrDefaultAsync(od => od.OrderID == orderId && od.ProductID == productId
+                    && (sizeId == -1 || od.SizeID == sizeId)
+                    && (colorId == -1 || od.ColorID == colorId));
+
+            if (orderDetail == null || orderDetail.Order.Status != "Completed")
+            {
+                TempData["ErrorMessage"] = "Đơn hàng không hợp lệ hoặc chưa hoàn thành.";
+                return RedirectToAction("MyOrders");
+            }
+
+            // Kiểm tra đánh giá trùng
+            if (await _context.ProductReviews.AnyAsync(r => r.ProductID == productId && r.UserID == userId && r.OrderID == orderId))
+            {
+                TempData["ErrorMessage"] = "Bạn đã đánh giá sản phẩm này.";
+                return RedirectToAction("MyOrders");
+            }
+
+            // Tạo ViewModel
+            var viewModel = new AddReviewViewModel
+            {
+                ProductName = orderDetail.Product?.ProductName ?? "Không xác định",
+                SizeName = orderDetail.Size?.SizeName ?? "Không có",
+                ColorName = orderDetail.Color?.ColorName ?? "Không có",
+                OrderDate = orderDetail.Order?.OrderDate ?? DateTime.Now,
+                Price = orderDetail.Price
+            };
+
+            ViewBag.ProductId = productId;
+            ViewBag.OrderId = orderId;
+            ViewBag.SizeId = sizeId == -1 ? 0 : sizeId;
+            ViewBag.ColorId = colorId == -1 ? 0 : colorId;
+
+            return View("~/Views/Product/AddReview.cshtml", viewModel);
+        }
+
+
+
+        [HttpPost]
+        [Route("AddReview")]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddReview(int productId, int orderId, int sizeId, int colorId, AddReviewViewModel model)
+        {
+            Console.WriteLine($"POST AddReview called at {DateTime.Now:yyyy-MM-dd HH:mm:ss}: productId={productId}, orderId={orderId}, sizeId={sizeId}, colorId={colorId}, Rating={model.Rating}, Comment={model.Comment}");
+
+            try
+            {
+                if (productId <= 0 || orderId <= 0)
+                {
+                    Console.WriteLine("Invalid productId or orderId");
+                    TempData["ErrorMessage"] = "Thông tin sản phẩm hoặc đơn hàng không hợp lệ.";
+                    return RedirectToAction("MyOrders", "Checkout");
+                }
+
+                if (!User.Identity.IsAuthenticated)
+                {
+                    Console.WriteLine("User is not authenticated");
+                    TempData["ErrorMessage"] = "Vui lòng đăng nhập để tiếp tục.";
+                    return RedirectToAction("Login", "Account");
+                }
+
+                var userName = User.Identity.Name;
+                if (string.IsNullOrEmpty(userName))
+                {
+                    Console.WriteLine("UserName is null or empty");
+                    TempData["ErrorMessage"] = "Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.";
+                    return RedirectToAction("Login", "Account");
+                }
+
+                // Truy vấn AspNetUsers để lấy Id dựa trên UserName
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => u.UserName == userName || u.Email == userName);
+                if (user == null)
+                {
+                    Console.WriteLine($"User with UserName or Email {userName} not found in AspNetUsers");
+                    TempData["ErrorMessage"] = "Tài khoản người dùng không hợp lệ.";
+                    return RedirectToAction("Login", "Account");
+                }
+                var userId = user.Id; // GUID
+                Console.WriteLine($"UserID from AspNetUsers: {userId}");
+
+                var orderDetail = await _context.OrderDetails
+                    .Include(od => od.Product)
+                    .Include(od => od.Size)
+                    .Include(od => od.Color)
+                    .Include(od => od.Order)
+                    .FirstOrDefaultAsync(od => od.OrderID == orderId && od.ProductID == productId
+                        && (sizeId == -1 || od.SizeID == sizeId)
+                        && (colorId == -1 || od.ColorID == colorId));
+
+                if (orderDetail == null || orderDetail.Order.Status != "Completed")
+                {
+                    Console.WriteLine("OrderDetail not found or status not Completed");
+                    TempData["ErrorMessage"] = "Đơn hàng không hợp lệ hoặc chưa hoàn thành.";
+                    model.ProductName = model.ProductName ?? "Không xác định";
+                    model.SizeName = model.SizeName ?? "Không có";
+                    model.ColorName = model.ColorName ?? "Không có";
+                    model.OrderDate = model.OrderDate;
+                    ViewBag.ProductId = productId;
+                    ViewBag.OrderId = orderId;
+                    ViewBag.SizeId = sizeId;
+                    ViewBag.ColorId = colorId;
+                    return View("~/Views/Product/AddReview.cshtml", model);
+                }
+
+                if (await _context.ProductReviews.AnyAsync(r => r.ProductID == productId && r.UserID == userId && r.OrderID == orderId))
+                {
+                    Console.WriteLine("Review already exists");
+                    TempData["ErrorMessage"] = "Bạn đã đánh giá sản phẩm này.";
+                    return RedirectToAction("MyOrders", "Checkout");
+                }
+
+                if (!ModelState.IsValid || !model.Rating.HasValue || model.Rating < 1 || model.Rating > 5)
+                {
+                    Console.WriteLine("Invalid ModelState or Rating");
+                    if (!model.Rating.HasValue || model.Rating < 1 || model.Rating > 5)
+                    {
+                        ModelState.AddModelError("Rating", "Số sao phải từ 1 đến 5.");
+                    }
+                    TempData["ErrorMessage"] = "Vui lòng kiểm tra thông tin nhập.";
+                    model.ProductName = orderDetail.Product?.ProductName ?? model.ProductName;
+                    model.SizeName = orderDetail.Size?.SizeName ?? model.SizeName;
+                    model.ColorName = orderDetail.Color?.ColorName ?? model.ColorName;
+                    model.OrderDate = orderDetail.Order?.OrderDate ?? model.OrderDate;
+                    model.Price = orderDetail.Price;
+                    ViewBag.ProductId = productId;
+                    ViewBag.OrderId = orderId;
+                    ViewBag.SizeId = sizeId;
+                    ViewBag.ColorId = colorId;
+                    return View("~/Views/Product/AddReview.cshtml", model);
+                }
+
+                var review = new ProductReview
+                {
+                    ProductID = productId,
+                    OrderID = orderId,
+                    UserID = userId,
+                    Rating = model.Rating.Value,
+                    Comment = string.IsNullOrWhiteSpace(model.Comment) ? null : model.Comment,
+                    ReviewDate = DateTime.Now,
+                    SizeID = sizeId == 0 ? null : sizeId,
+                    ColorID = colorId == 0 ? null : colorId
+                };
+
+                Console.WriteLine($"Review details: ProductID={review.ProductID}, OrderID={review.OrderID}, UserID={review.UserID}, Rating={review.Rating}, SizeID={review.SizeID}, ColorID={review.ColorID}");
+                _context.ProductReviews.Add(review);
+
+                Console.WriteLine("Saving changes to database");
+                await _context.SaveChangesAsync();
+                Console.WriteLine("Review saved successfully");
+
+                TempData["SuccessMessage"] = "Cảm ơn bạn đã đánh giá!";
+                return RedirectToAction("MyOrders", "Checkout");
+            }
+            catch (DbUpdateException dbEx)
+            {
+                Console.WriteLine($"DbUpdateException in POST AddReview: {dbEx.Message}\nInnerException: {dbEx.InnerException?.Message}\nStackTrace: {dbEx.StackTrace}");
+                TempData["ErrorMessage"] = $"Lỗi khi lưu đánh giá: {dbEx.InnerException?.Message ?? dbEx.Message}";
+                return View("~/Views/Product/AddReview.cshtml", model);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"General Exception in POST AddReview: {ex.Message}\nStackTrace: {ex.StackTrace}");
+                TempData["ErrorMessage"] = "Đã xảy ra lỗi khi gửi đánh giá.";
+                return View("~/Views/Product/AddReview.cshtml", model);
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetReviews(int productId, int rating = 0)
+        {
+            var reviewsQuery = _context.ProductReviews
                 .Include(r => r.User)
+                .Include(r => r.Size)
+                .Include(r => r.Color)
+                .Where(r => r.ProductID == productId);
+
+            if (rating > 0)
+            {
+                reviewsQuery = reviewsQuery.Where(r => r.Rating == rating);
+            }
+
+            var reviews = await reviewsQuery
                 .OrderByDescending(r => r.ReviewDate)
                 .ToListAsync();
 
-            ViewData["Reviews"] = reviews;
-            ViewData["Sizes"] = product.ProductSizes.Select(ps => ps.Size).ToList();
-            ViewData["Colors"] = product.ProductColors.Select(pc => pc.Color).ToList();
-
-            return View(product);
+            return PartialView("_ReviewsPartial", reviews);
         }
-
         // GET: Product/Wishlist
         public async Task<IActionResult> Wishlist()
         {
@@ -495,74 +695,6 @@ namespace ShoeShopWebsite.Controllers
                 }
                 await _context.SaveChangesAsync();
             }
-        }
-        // GET: Product/AddReview/5?orderId=1
-        [Authorize]
-        [HttpGet]
-        public async Task<IActionResult> AddReview(int productId)
-        {
-            var userId = User.Identity.Name;
-            var hasPurchased = await _context.OrderDetails
-                .Join(_context.Orders,
-                    od => od.OrderID,
-                    o => o.OrderID,
-                    (od, o) => new { od.ProductID, o.SessionId, o.Status })
-                .AnyAsync(x => x.ProductID == productId && x.SessionId == userId && x.Status == "Completed");
-
-            if (!hasPurchased)
-            {
-                TempData["ErrorMessage"] = "Bạn chỉ có thể đánh giá sản phẩm đã mua và hoàn tất đơn hàng.";
-                return RedirectToAction("Index");
-            }
-
-            var hasReviewed = await _context.ProductReviews
-                .AnyAsync(r => r.ProductID == productId && r.UserID == userId);
-
-            if (hasReviewed)
-            {
-                TempData["ErrorMessage"] = "Bạn đã đánh giá sản phẩm này.";
-                return RedirectToAction("Index");
-            }
-
-            var model = new ProductReview
-            {
-                ProductID = productId,
-                UserID = userId,
-                ReviewDate = DateTime.Now
-            };
-
-            ViewData["ProductName"] = (await _context.Products.FindAsync(productId))?.ProductName;
-            return View("~/Views/Product/AddReview.cshtml", model);
-        }
-
-        [Authorize]
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddReview(ProductReview review)
-        {
-            if (!ModelState.IsValid || review.Rating < 1 || review.Rating > 5)
-            {
-                ModelState.AddModelError("Rating", "Điểm đánh giá phải từ 1 đến 5.");
-                ViewData["ProductName"] = (await _context.Products.FindAsync(review.ProductID))?.ProductName;
-                return View("~/Views/Product/AddReview.cshtml", review);
-            }
-
-            try
-            {
-                review.UserID = User.Identity.Name;
-                review.ReviewDate = DateTime.Now;
-                _context.ProductReviews.Add(review);
-                await _context.SaveChangesAsync();
-
-                TempData["SuccessMessage"] = "Thêm đánh giá thành công!";
-                return RedirectToAction("Details", new { id = review.ProductID });
-            }
-            catch (Exception ex)
-            {
-                TempData["ErrorMessage"] = $"Lỗi khi thêm đánh giá: {ex.Message}";
-                ViewData["ProductName"] = (await _context.Products.FindAsync(review.ProductID))?.ProductName;
-                return View("~/Views/Product/AddReview.cshtml", review);
-            }
-        }
+        } 
     }
 }

@@ -149,21 +149,46 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
 
         [HttpGet]
         [Route("ReviewList")]
-        public async Task<IActionResult> ReviewList()
+        public async Task<IActionResult> ReviewList(string search, int page = 1, int pageSize = 10)
         {
-            var reviews = await _context.ProductReviews
+            var query = _context.ProductReviews
                 .Include(r => r.Product)
                 .Include(r => r.User)
-                .Select(r => new
+                .Include(r => r.Size)
+                .Include(r => r.Color)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                query = query.Where(r =>
+                    r.Product.ProductName.Contains(search) ||
+                    (r.User.FullName != null && r.User.FullName.Contains(search)) ||
+                    r.User.UserName.Contains(search) ||
+                    r.Comment.Contains(search));
+            }
+
+            var totalItems = await query.CountAsync();
+            var reviews = await query
+                .OrderByDescending(r => r.ReviewDate)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(r => new ReviewViewModel
                 {
-                    r.ReviewID,
-                    r.Product.ProductName,
+                    ReviewID = r.ReviewID,
+                    ProductName = r.Product.ProductName,
                     UserName = r.User.FullName ?? r.User.UserName,
-                    r.Rating,
-                    r.Comment,
-                    r.ReviewDate
+                    Rating = r.Rating,
+                    Comment = r.Comment,
+                    ReviewDate = r.ReviewDate,
+                    Size = r.Size != null ? r.Size.SizeName : "N/A",
+                    Color = r.Color != null ? r.Color.ColorName : "N/A"
                 })
                 .ToListAsync();
+
+            ViewBag.Page = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.Search = search;
 
             return View("~/Views/Admin/ReviewList.cshtml", reviews);
         }
@@ -829,6 +854,266 @@ namespace ShoeShopWebsite.Areas.Admin.Controllers
                     image.IsPrimary = image.ImageID == primaryImageId;
                 }
                 await _context.SaveChangesAsync();
+            }
+        }
+        // Quản lý Kích thước (Size)
+        [HttpGet]
+        [Route("SizeList")]
+        public IActionResult SizeList(string search, int page = 1, int pageSize = 10)
+        {
+            var query = _context.Sizes.AsQueryable();
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                query = query.Where(s => s.SizeName.Contains(search));
+            }
+
+            var totalItems = query.Count();
+            var sizes = query
+                .OrderBy(s => s.SizeName)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            ViewBag.Page = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.Search = search;
+
+            return View("~/Views/Admin/SizeList.cshtml", sizes);
+        }
+
+        [HttpGet]
+        [Route("CreateSize")]
+        public IActionResult CreateSize()
+        {
+            return View("~/Views/Admin/CreateSize.cshtml");
+        }
+
+        [HttpPost]
+        [Route("CreateSize")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateSize(Size size)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("~/Views/Admin/CreateSize.cshtml", size);
+            }
+
+            try
+            {
+                _context.Sizes.Add(size);
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Thêm kích thước thành công!";
+                return RedirectToAction(nameof(SizeList));
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Lỗi khi thêm kích thước: {ex.Message}";
+                return View("~/Views/Admin/CreateSize.cshtml", size);
+            }
+        }
+
+        [HttpGet]
+        [Route("EditSize/{id}")]
+        public async Task<IActionResult> EditSize(int? id)
+        {
+            if (id == null) return NotFound();
+
+            var size = await _context.Sizes.FirstOrDefaultAsync(s => s.SizeID == id);
+            if (size == null) return NotFound();
+
+            return View("~/Views/Admin/EditSize.cshtml", size);
+        }
+
+        [HttpPost]
+        [Route("EditSize/{id}")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditSize(int id, Size size)
+        {
+            if (id != size.SizeID) return NotFound();
+
+            if (!ModelState.IsValid)
+            {
+                return View("~/Views/Admin/EditSize.cshtml", size);
+            }
+
+            try
+            {
+                var existingSize = await _context.Sizes.FirstOrDefaultAsync(s => s.SizeID == id);
+                if (existingSize == null)
+                {
+                    TempData["ErrorMessage"] = "Không tìm thấy kích thước để cập nhật.";
+                    return RedirectToAction(nameof(SizeList));
+                }
+
+                existingSize.SizeName = size.SizeName;
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Cập nhật kích thước thành công!";
+                return RedirectToAction(nameof(SizeList));
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Lỗi khi cập nhật kích thước: {ex.Message}";
+                return View("~/Views/Admin/EditSize.cshtml", size);
+            }
+        }
+
+        [HttpPost]
+        [Route("DeleteSize/{id}")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteSize(int id)
+        {
+            try
+            {
+                var size = await _context.Sizes.FirstOrDefaultAsync(s => s.SizeID == id);
+                if (size == null)
+                {
+                    return Json(new { success = false, error = "Không tìm thấy kích thước để xóa." });
+                }
+
+                if (await _context.ProductSizes.AnyAsync(ps => ps.SizeID == id))
+                {
+                    return Json(new { success = false, error = "Không thể xóa kích thước vì có sản phẩm liên quan." });
+                }
+
+                _context.Sizes.Remove(size);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Xóa kích thước thành công!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = $"Lỗi khi xóa kích thước: {ex.Message}" });
+            }
+        }
+
+        [HttpGet]
+        [Route("ColorList")]
+        public IActionResult ColorList(string search, int page = 1, int pageSize = 10)
+        {
+            var query = _context.Colors.AsQueryable();
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                query = query.Where(c => c.ColorName.Contains(search));
+            }
+
+            var totalItems = query.Count();
+            var colors = query
+                .OrderBy(c => c.ColorName)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            ViewBag.Page = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.Search = search;
+
+            return View("~/Views/Admin/ColorList.cshtml", colors);
+        }
+
+        [HttpGet]
+        [Route("CreateColor")]
+        public IActionResult CreateColor()
+        {
+            return View("~/Views/Admin/CreateColor.cshtml");
+        }
+
+        [HttpPost]
+        [Route("CreateColor")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateColor(Color color)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("~/Views/Admin/CreateColor.cshtml", color);
+            }
+
+            try
+            {
+                _context.Colors.Add(color);
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Thêm màu sắc thành công!";
+                return RedirectToAction(nameof(ColorList));
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Lỗi khi thêm màu sắc: {ex.Message}";
+                return View("~/Views/Admin/CreateColor.cshtml", color);
+            }
+        }
+
+        [HttpGet]
+        [Route("EditColor/{id}")]
+        public async Task<IActionResult> EditColor(int? id)
+        {
+            if (id == null) return NotFound();
+
+            var color = await _context.Colors.FirstOrDefaultAsync(c => c.ColorID == id);
+            if (color == null) return NotFound();
+
+            return View("~/Views/Admin/EditColor.cshtml", color);
+        }
+
+        [HttpPost]
+        [Route("EditColor/{id}")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditColor(int id, Color color)
+        {
+            if (id != color.ColorID) return NotFound();
+
+            if (!ModelState.IsValid)
+            {
+                return View("~/Views/Admin/EditColor.cshtml", color);
+            }
+
+            try
+            {
+                var existingColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorID == id);
+                if (existingColor == null)
+                {
+                    TempData["ErrorMessage"] = "Không tìm thấy màu sắc để cập nhật.";
+                    return RedirectToAction(nameof(ColorList));
+                }
+
+                existingColor.ColorName = color.ColorName;
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Cập nhật màu sắc thành công!";
+                return RedirectToAction(nameof(ColorList));
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Lỗi khi cập nhật màu sắc: {ex.Message}";
+                return View("~/Views/Admin/EditColor.cshtml", color);
+            }
+        }
+
+        [HttpPost]
+        [Route("DeleteColor/{id}")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteColor(int id)
+        {
+            try
+            {
+                var color = await _context.Colors.FirstOrDefaultAsync(c => c.ColorID == id);
+                if (color == null)
+                {
+                    return Json(new { success = false, error = "Không tìm thấy màu sắc để xóa." });
+                }
+
+                if (await _context.ProductColors.AnyAsync(pc => pc.ColorID == id))
+                {
+                    return Json(new { success = false, error = "Không thể xóa màu sắc vì có sản phẩm liên quan." });
+                }
+
+                _context.Colors.Remove(color);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Xóa màu sắc thành công!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = $"Lỗi khi xóa màu sắc: {ex.Message}" });
             }
         }
     }

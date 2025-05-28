@@ -4,146 +4,212 @@
     ViewData["Title"] = "Thanh toán - ShoeShopWebsite";
 }
 
-<div class="container mt-5">
-    <h2 class="mb-4">Thanh toán</h2>
+<div class="container my-5">
+    <h2 class="text-center mb-4 fw-bold">Thanh toán đơn hàng</h2>
 
+    <!-- Thông báo lỗi hoặc thành công -->
     @if (TempData["ErrorMessage"] != null)
     {
-        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
     }
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
     }
 
-    <div class="row">
-        <div class="col-md-6">
-            <h4>Thông tin giao hàng</h4>
-            <form id="checkoutForm" asp-action="ProcessPayment" asp-controller="Checkout" method="post">
-                @Html.AntiForgeryToken()
+    <div class="row g-4">
+        <!-- Phần thông tin giao hàng -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h4 class="card-title mb-4">Thông tin giao hàng</h4>
+                    <form id="checkoutForm" asp-action="ProcessPayment" asp-controller="Checkout" method="post">
+                        @Html.AntiForgeryToken()
 
-                <div class="mb-3">
-                    <label for="FullName" class="form-label">Họ và tên</label>
-                    <input asp-for="FullName" class="form-control" required />
-                    <span asp-validation-for="FullName" class="text-danger"></span>
+                        <div class="mb-3">
+                            <label for="FullName" class="form-label">Họ và tên <span class="text-danger">*</span></label>
+                            <input asp-for="FullName" class="form-control" placeholder="Nhập họ và tên" required />
+                            <span asp-validation-for="FullName" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="Email" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input asp-for="Email" class="form-control" placeholder="Nhập địa chỉ email" required />
+                            <span asp-validation-for="Email" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="PhoneNumber" class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+                            <input asp-for="PhoneNumber" class="form-control" placeholder="Nhập số điện thoại (VD: 0987654321)" required />
+                            <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="Province" class="form-label">Tỉnh/Thành phố <span class="text-danger">*</span></label>
+                            <input asp-for="Province" class="form-control" placeholder="Nhập tỉnh/thành phố" required />
+                            <span asp-validation-for="Province" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="District" class="form-label">Quận/Huyện <span class="text-danger">*</span></label>
+                            <input asp-for="District" class="form-control" placeholder="Nhập quận/huyện" required />
+                            <span asp-validation-for="District" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="Ward" class="form-label">Phường/Xã <span class="text-danger">*</span></label>
+                            <input asp-for="Ward" class="form-control" placeholder="Nhập phường/xã" required />
+                            <span asp-validation-for="Ward" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="AddressDetail" class="form-label">Địa chỉ chi tiết <span class="text-danger">*</span></label>
+                            <input asp-for="AddressDetail" class="form-control" placeholder="Nhập địa chỉ chi tiết" required />
+                            <span asp-validation-for="AddressDetail" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="Note" class="form-label">Ghi chú</label>
+                            <textarea asp-for="Note" class="form-control" placeholder="Ghi chú cho đơn hàng (nếu có)"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="DiscountCode" class="form-label">Mã giảm giá</label>
+                            <div class="input-group">
+                                <input type="text" id="DiscountCode" name="DiscountCode" class="form-control" value="@Model.DiscountCode" placeholder="Nhập mã giảm giá" />
+                                <button type="button" id="applyDiscount" class="btn btn-outline-primary">Áp dụng</button>
+                            </div>
+                            <span id="discountFeedback" class="text-danger"></span>
+                            @if (Model.DiscountAmount.HasValue && Model.DiscountAmount > 0)
+                            {
+                                <div class="alert alert-success mt-2">Đã áp dụng mã giảm giá: Giảm @Model.DiscountAmount.Value.ToString("N0") đ</div>
+                            }
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Phương thức thanh toán <span class="text-danger">*</span></label>
+                            <div class="form-check">
+                                <input type="radio" id="cash" name="PaymentMethod" value="Cash" class="form-check-input" required />
+                                <label for="cash" class="form-check-label">Thanh toán khi nhận hàng (COD)</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="radio" id="vnpay" name="PaymentMethod" value="VNPay" class="form-check-input" />
+                                <label for="vnpay" class="form-check-label">Thanh toán qua VNPay</label>
+                            </div>
+                            <span asp-validation-for="PaymentMethod" class="text-danger"></span>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Hoàn tất thanh toán</button>
+                    </form>
                 </div>
-
-                <div class="mb-3">
-                    <label for="Province" class="form-label">Tỉnh/Thành phố</label>
-                    <input asp-for="Province" class="form-control" required />
-                    <span asp-validation-for="Province" class="text-danger"></span>
-                </div>
-
-                <div class="mb-3">
-                    <label for="District" class="form-label">Quận/Huyện</label>
-                    <input asp-for="District" class="form-control" required />
-                    <span asp-validation-for="District" class="text-danger"></span>
-                </div>
-
-                <div class="mb-3">
-                    <label for="Ward" class="form-label">Phường/Xã</label>
-                    <input asp-for="Ward" class="form-control" required />
-                    <span asp-validation-for="Ward" class="text-danger"></span>
-                </div>
-
-                <div class="mb-3">
-                    <label for="AddressDetail" class="form-label">Địa chỉ chi tiết</label>
-                    <input asp-for="AddressDetail" class="form-control" required />
-                    <span asp-validation-for="AddressDetail" class="text-danger"></span>
-                </div>
-
-                <div class="mb-3">
-                    <label for="PhoneNumber" class="form-label">Số điện thoại</label>
-                    <input asp-for="PhoneNumber" class="form-control" required />
-                    <span asp-validation-for="PhoneNumber" class="text-danger"></span>
-                </div>
-
-                <div class="mb-3">
-                    <label for="Note" class="form-label">Ghi chú</label>
-                    <textarea asp-for="Note" class="form-control"></textarea>
-                </div>
-
-                <div class="mb-3">
-                    <label for="DiscountCode" class="form-label">Mã giảm giá</label>
-                    <div class="input-group">
-                        <input type="text" id="DiscountCode" name="DiscountCode" class="form-control" value="@Model.DiscountCode" placeholder="Nhập mã giảm giá" />
-                        <button type="button" id="applyDiscount" class="btn btn-outline-primary">Áp dụng</button>
-                    </div>
-                    <span id="discountFeedback" class="text-danger"></span>
-                    @if (Model.DiscountAmount.HasValue && Model.DiscountAmount > 0)
-                    {
-                        <div class="alert alert-success mt-2">Đã áp dụng mã giảm giá: Giảm @Model.DiscountAmount.Value.ToString("N0") đ</div>
-                    }
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Phương thức thanh toán</label>
-                    <div>
-                        <input type="radio" id="cash" name="PaymentMethod" value="Cash" required />
-                        <label for="cash">Thanh toán khi nhận hàng (COD)</label>
-                    </div>
-                    <div>
-                        <input type="radio" id="vnpay" name="PaymentMethod" value="VNPay" />
-                        <label for="vnpay">Thanh toán qua VNPay</label>
-                    </div>
-                    <span asp-validation-for="PaymentMethod" class="text-danger"></span>
-                </div>
-
-                <button type="submit" class="btn btn-primary">Thanh toán</button>
-            </form>
+            </div>
         </div>
-        <div class="col-md-6">
-            <h4>Chi tiết đơn hàng</h4>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Sản phẩm</th>
-                        <th>Số lượng</th>
-                        <th>Giá</th>
-                        <th>Tổng</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model?.CartItems != null && Model.CartItems.Any())
-                    {
-                        foreach (var item in Model.CartItems)
-                        {
-                            <tr>
-                                <td>
-                                    @item.Product.ProductName
-                                    (Size: @item.Size.SizeName@(item.Color != null ? ", Color: " + item.Color.ColorName : ""))
-                                </td>
-                                <td>@item.Quantity</td>
-                                <td>@item.Product.Price.ToString("N0") đ</td>
-                                <td>@((item.Product.Price * item.Quantity).ToString("N0")) đ</td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="4">Giỏ hàng trống.</td>
-                        </tr>
-                    }
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="3" class="text-end"><strong>Tổng cộng:</strong></td>
-                        <td id="totalPrice"><strong>@(Model?.CartItems != null ? Model.CartItems.Sum(c => c.Product.Price * c.Quantity).ToString("N0") : "0") đ</strong></td>
-                    </tr>
-                    <tr id="discountRow" style="@(Model != null && Model.DiscountAmount.HasValue && Model.DiscountAmount > 0 ? "" : "display:none;")">
-                        <td colspan="3" class="text-end"><strong>Giảm giá:</strong></td>
-                        <td id="discountAmount"><strong>@(Model != null && Model.DiscountAmount.HasValue && Model.DiscountAmount > 0 ? "-" + Model.DiscountAmount.Value.ToString("N0") + " đ" : "")</strong></td>
-                    </tr>
-                    <tr id="finalPriceRow" style="@(Model != null && Model.DiscountAmount.HasValue && Model.DiscountAmount > 0 ? "" : "display:none;")">
-                        <td colspan="3" class="text-end"><strong>Thành tiền:</strong></td>
-                        <td id="finalPrice"><strong>@(Model != null && Model.DiscountAmount.HasValue && Model.DiscountAmount > 0 ? (Model.CartItems.Sum(c => c.Product.Price * c.Quantity) - Model.DiscountAmount.Value).ToString("N0") + " đ" : "")</strong></td>
-                    </tr>
-                </tfoot>
-            </table>
+
+        <!-- Phần chi tiết đơn hàng -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h4 class="card-title mb-4">Chi tiết đơn hàng</h4>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Sản phẩm</th>
+                                    <th>Số lượng</th>
+                                    <th>Giá</th>
+                                    <th>Tổng</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model?.CartItems != null && Model.CartItems.Any())
+                                {
+                                    foreach (var item in Model.CartItems)
+                                    {
+                                        <tr>
+                                            <td>
+                                                @item.Product.ProductName
+                                                <small class="text-muted d-block">
+                                                    (Size: @item.Size.SizeName@(item.Color != null ? ", Color: " + item.Color.ColorName : ""))
+                                                </small>
+                                            </td>
+                                            <td>@item.Quantity</td>
+                                            <td>@item.Product.Price.ToString("N0") đ</td>
+                                            <td>@((item.Product.Price * item.Quantity).ToString("N0")) đ</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center">Giỏ hàng trống.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Tổng cộng:</strong></td>
+                                    <td id="totalPrice"><strong>@(Model?.CartItems != null ? Model.CartItems.Sum(c => c.Product.Price * c.Quantity).ToString("N0") : "0") đ</strong></td>
+                                </tr>
+                                <tr id="discountRow" style="@(Model != null && Model.DiscountAmount.HasValue && Model.DiscountAmount > 0 ? "" : "display:none;")">
+                                    <td colspan="3" class="text-end"><strong>Giảm giá:</strong></td>
+                                    <td id="discountAmount"><strong>@(Model != null && Model.DiscountAmount.HasValue && Model.DiscountAmount > 0 ? "-" + Model.DiscountAmount.Value.ToString("N0") + " đ" : "")</strong></td>
+                                </tr>
+                                <tr id="finalPriceRow" style="@(Model != null && Model.DiscountAmount.HasValue && Model.DiscountAmount > 0 ? "" : "display:none;")">
+                                    <td colspan="3" class="text-end"><strong>Thành tiền:</strong></td>
+                                    <td id="finalPrice"><strong>@(Model != null && Model.DiscountAmount.HasValue && Model.DiscountAmount > 0 ? (Model.CartItems.Sum(c => c.Product.Price * c.Quantity) - Model.DiscountAmount.Value).ToString("N0") + " đ" : "")</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+@section Styles {
+    <style>
+        .card {
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+            .card:hover {
+                box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            }
+
+        .form-label {
+            font-weight: 500;
+        }
+
+        .form-control, .form-check-input {
+            border-radius: 5px;
+        }
+
+        .btn-primary {
+            border-radius: 5px;
+            padding: 10px 20px;
+        }
+
+        .table th, .table td {
+            vertical-align: middle;
+        }
+
+        .table-responsive {
+            border-radius: 5px;
+        }
+
+        .alert-dismissible .btn-close {
+            padding: 0.75rem 1.25rem;
+        }
+    </style>
+}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
@@ -163,33 +229,22 @@
                     success: function (response) {
                         $('#discountFeedback').empty();
                         if (response.success) {
-                            // Hiển thị thông báo thành công
                             $('#discountFeedback').html('<span class="text-success">' + response.message + '</span>');
-
-                            // Cập nhật bảng chi tiết đơn hàng
                             var totalPrice = parseFloat('@(Model?.CartItems != null ? Model.CartItems.Sum(c => c.Product.Price * c.Quantity) : 0)');
                             var discountAmount = parseFloat(response.discountAmount);
                             var finalPrice = totalPrice - discountAmount;
 
-                            // Định dạng số tiền với dấu phân cách hàng nghìn
                             var formatNumber = function(num) {
                                 return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                             };
 
-                            // Cập nhật hàng giảm giá
                             $('#discountRow').show();
                             $('#discountAmount').html('<strong>-' + formatNumber(discountAmount.toFixed(0)) + ' đ</strong>');
-
-                            // Cập nhật hàng thành tiền
                             $('#finalPriceRow').show();
                             $('#finalPrice').html('<strong>' + formatNumber(finalPrice.toFixed(0)) + ' đ</strong>');
-
-                            // Lưu mã giảm giá vào input ẩn (nếu cần gửi lại server)
                             $('#DiscountCode').val(discountCode);
                         } else {
-                            // Hiển thị thông báo lỗi
                             $('#discountFeedback').text(response.message);
-                            // Ẩn hàng giảm giá và thành tiền nếu mã không hợp lệ
                             $('#discountRow').hide();
                             $('#finalPriceRow').hide();
                         }

@@ -1,0 +1,78 @@
+﻿@model ShoeShopWebsite.Models.AddReviewViewModel
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Thông tin đơn hàng</h5>
+        <p class="mb-1"><strong>Sản phẩm:</strong> <span id="productName">@Model.ProductName</span></p>
+        <p class="mb-1"><strong>Size:</strong> <span id="sizeName">@Model.SizeName</span></p>
+        <p class="mb-1"><strong>Màu:</strong> <span id="colorName">@Model.ColorName</span></p>
+        <p class="mb-1"><strong>Ngày mua:</strong> <span id="orderDate">@Model.OrderDate.ToString("dd/MM/yyyy")</span></p>
+        <p class="mb-0"><strong>Giá:</strong> <span id="price">@Model.Price.ToString("N0")</span> đ</p>
+    </div>
+</div>
+
+<form id="reviewForm" method="post">
+   
+    <div class="form-group mb-4">
+        <label asp-for="Rating" class="form-label"><strong>Đánh giá của bạn:</strong></label>
+        <div class="rating-stars">
+            @for (int i = 5; i >= 1; i--)
+            {
+                <input type="radio" asp-for="Rating" value="@i" id="rating-@i" />
+                <label for="rating-@i" class="star">★</label>
+            }
+        </div>
+        <span asp-validation-for="Rating" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-4">
+        <label asp-for="Comment" class="form-label"><strong>Bình luận (không bắt buộc):</strong></label>
+        <textarea asp-for="Comment" class="form-control"></textarea>
+        <span asp-validation-for="Comment" class="text-danger"></span>
+        <small class="text-muted">@(Model.Comment?.Length ?? 0)/500 ký tự</small>
+    </div>
+
+    <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Gửi đánh giá</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+    </div>
+</form>
+
+<style>
+    .rating-stars {
+        display: flex;
+        flex-direction: row-reverse;
+        justify-content: flex-end;
+        font-size: 2rem;
+        line-height: 2rem;
+    }
+
+        .rating-stars input {
+            display: none;
+        }
+
+        .rating-stars label {
+            color: #ddd;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+
+            .rating-stars input:checked ~ label,
+            .rating-stars label:hover,
+            .rating-stars label:hover ~ label {
+                color: #ffc107;
+            }
+
+        .rating-stars input:checked + label {
+            color: #ffc107;
+        }
+</style>
+
+<script>
+    $(document).ready(function () {
+        $('textarea').on('input', function () {
+            var length = $(this).val().length;
+            $(this).nextAll('small').text(length + '/500 ký tự');
+        });
+    });
+</script>

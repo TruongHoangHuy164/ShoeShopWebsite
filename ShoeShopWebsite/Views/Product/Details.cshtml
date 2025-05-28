@@ -2,6 +2,10 @@
 @using ShoeShopWebsite.Models;
 @{
     ViewData["Title"] = "Chi tiết sản phẩm - " + Model.ProductName;
+    var reviews = ViewData["Reviews"] as List<ShoeShopWebsite.Models.ProductReview> ?? new List<ShoeShopWebsite.Models.ProductReview>();
+    var averageRating = reviews.Any() ? Math.Round(reviews.Average(r => r.Rating), 1) : 0;
+    int fullStars = (int)Math.Floor(averageRating);
+    bool hasHalfStar = averageRating - fullStars >= 0.5;
 }
 
 <div class="container my-5 nike-style">
@@ -106,35 +110,42 @@
             <!-- Nút quay lại -->
             <a asp-action="Index" class="btn btn-link mt-3 text-muted">Quay lại danh sách sản phẩm</a>
         </div>
-
     </div>
-
 </div>
-<div class="reviews-section mt-5">
-    <h3>Đánh giá sản phẩm</h3>
-    <div class="mb-3">
-        <label for="filterRating" class="form-label">Lọc theo số sao:</label>
-        <select id="filterRating" class="form-select w-auto d-inline-block">
-            <option value="0">Tất cả</option>
-            @for (int i = 1; i <= 5; i++)
-            {
-                <option value="@i">@i sao</option>
-            }
-        </select>
-    </div>
-    @{
-        var reviews = ViewData["Reviews"] as List<ProductReview> ?? new List<ProductReview>();
-        var averageRating = reviews.Any() ? Math.Round(reviews.Average(r => r.Rating), 1) : 0;
-    }
 
-    @if (reviews.Any())
-    {
-        <div id="reviewsContainer">
+<div class="reviews-section mt-5">
+    <h3>Đánh giá sản phẩm (@reviews.Count() đánh giá)</h3>
+    <div class="average-rating mb-3 d-inline-flex align-items-center gap-2 p-2 border rounded">
+        <span class="fw-bold">Trung bình:</span>
+        @for (int i = 1; i <= 5; i++)
+        {
+            if (i <= fullStars)
+            {
+                <i class="fas fa-star text-warning"></i>
+            }
+            else if (i == fullStars + 1 && hasHalfStar)
+            {
+                <i class="fas fa-star-half-alt text-warning"></i>
+            }
+            else
+            {
+                <i class="fas fa-star text-muted"></i>
+            }
+        }
+        <span class="fw-bold">@averageRating</span>
+    </div>
+    <div id="reviewsContainer">
+        @if (!reviews.Any())
+        {
+            <p class="text-muted">Chưa có đánh giá nào cho sản phẩm này.</p>
+        }
+        else
+        {
             @foreach (var review in reviews)
             {
                 <div class="review-item mb-3 p-3 border rounded" data-rating="@review.Rating">
                     <div class="d-flex justify-content-between">
-                        <strong>@(review.User?.FullName ?? review.User?.UserName)</strong>
+                        <strong>@(review.User?.FullName ?? review.User?.UserName ?? "Ẩn danh")</strong>
                         <span>@review.ReviewDate.ToString("dd/MM/yyyy HH:mm")</span>
                     </div>
                     <div class="rating">
@@ -144,15 +155,14 @@
                         }
                     </div>
                     <p class="mt-2">@(string.IsNullOrEmpty(review.Comment) ? "Không có bình luận" : review.Comment)</p>
+                    <p class="text-muted">Kích cỡ: @(review.Size?.SizeName ?? "N/A")</p>
+                    <p class="text-muted">Màu sắc: @(review.Color?.ColorName ?? "N/A")</p>
                 </div>
             }
-        </div>
-    }
-    else
-    {
-        <p>Chưa có đánh giá nào cho sản phẩm này.</p>
-    }
+        }
+    </div>
 </div>
+
 <style>
     .reviews-section {
         border-top: 1px solid #E0E0E0;
@@ -172,6 +182,7 @@
         font-size: 1.2rem;
         margin-right: 2px;
     }
+
     .nike-style {
         font-family: 'Helvetica Neue', Arial, sans-serif;
         max-width: 1200px;
@@ -266,6 +277,30 @@
         .btn-add-to-cart:hover {
             background-color: #333;
         }
+
+    /* Thiết kế cho sao trung bình */
+    .average-rating {
+        background-color: #f9f9f9;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+
+        .average-rating:hover {
+            background-color: #f5f5f5;
+            transform: scale(1.05);
+        }
+
+        .average-rating .fa-star,
+        .average-rating .fa-star-half-alt {
+            font-size: 1.2rem;
+            margin-right: 3px;
+        }
+
+        .average-rating span {
+            font-size: 1.1rem;
+            color: #111;
+        }
 </style>
 
 @section Scripts {
@@ -296,14 +331,14 @@
 
                 var productId = $(this).find('input[name="productId"]').val();
                 var sizeId = $('#selectedSizeId').val();
-                var colorId = $('#colorId').val() === "" ? null : $('#colorId').val(); // Xử lý khi không chọn màu
+                var colorId = $('#colorId').val() === "" ? null : $('#colorId').val();
                 var quantity = $(this).find('input[name="quantity"]').val();
 
                 if (!sizeId) {
                     showToast('Vui lòng chọn kích cỡ!', false);
                     return;
                 }
-                if (!colorId && '@Model.ProductColors?.Count' > 0) { // Chỉ yêu cầu màu nếu sản phẩm có màu
+                if (!colorId && '@Model.ProductColors?.Count' > 0) {
                     showToast('Vui lòng chọn màu sắc!', false);
                     return;
                 }
